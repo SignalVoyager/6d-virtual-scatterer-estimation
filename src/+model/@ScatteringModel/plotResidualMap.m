@@ -1,0 +1,72 @@
+function plotResidualMap(obj, txGrid, opt)
+% plotResidualMap - plot spatial residuals (prediction minus target in dB).
+% Uses train+test samples for the selected TX and highlights large errors.
+if nargin < 3 || isempty(opt), opt = struct(); end
+if ~isfield(opt,"topPercentile"), opt.topPercentile = 95; end
+if ~isfield(opt,"q"), opt.q = 0.02; end
+if ~isfield(opt,"eps_min"), opt.eps_min = 1e-12; end
+
+C = obj.getPlotContext();
+Kx = C.Kx; Ky = C.Ky;
+xCenters = C.xCenters; yCenters = C.yCenters;
+scatterTable = C.scatterTable;
+gridSize = C.gridSize;
+
+% txGrid: [col,row]
+assert(all(txGrid(:,1) >= 1 & txGrid(:,1) <= Kx), 'col out of range.');
+assert(all(txGrid(:,2) >= 1 & txGrid(:,2) <= Ky), 'row out of range.');
+txGridIdx = sub2ind([Ky, Kx], txGrid(:,2), txGrid(:,1));
+
+% collect samples for this TX from train+test
+pairsTR = [obj.raytracingResults.trainSet; obj.raytracingResults.testSet];
+pairsTR = pairsTR(pairsTR(:,1) == txGridIdx, :);
+
+if isempty(pairsTR)
+    warning('[plot] No train/test samples found for tx_idx=%d. Skip diagnostic plots.', txGridIdx);
+    return;
+end
+
+y_mW    = pairsTR(:,3);
+yhat_mW = obj.predict(pairsTR(:,1:2));
+[y_mW, yhat_mW] = applyNoiseFloor(y_mW, yhat_mW, opt.q, opt.eps_min);
+
+eps_mW = opt.eps_min;
+bad_true = isnan(y_mW) | isinf(y_mW) | (y_mW < 0); y_mW(bad_true) = 0;
+bad_pred = isnan(yhat_mW) | isinf(yhat_mW) | (yhat_mW < 0); yhat_mW(bad_pred) = 0;
+
+y_dBm    = 10*log10(max(y_mW, eps_mW));
+yhat_dBm = 10*log10(max(yhat_mW, eps_mW));
+
+res_dB  = yhat_dBm - y_dBm;
+abs_res = abs(res_dB);
+
+[ry, rx] = ind2sub([Ky, Kx], pairsTR(:,2));
+rx_xy = [xCenters(rx).', yCenters(ry).'];
+
+figure;
+scatter(rx_xy(:,1), rx_xy(:,2), 40, res_dB, 'filled'); hold on;
+set(gca, 'YDir', 'normal');
+axis equal;
+xlim([xCenters(1)-gridSize/2, xCenters(end)+gridSize/2]);
+ylim([yCenters(1)-gridSize/2, yCenters(end)+gridSize/2]);
+colorbar;
+title(sprintf('10log10(hhat/h) (dB), TX=%d (train+test)', txGridIdx));
+xlabel('x (m)'); ylabel('y (m)');
+
+% mark TX
+[ty, tx] = ind2sub([Ky, Kx], txGridIdx);
+tx_pos = [xCenters(tx), yCenters(ty)];
+plot(tx_pos(1), tx_pos(2), 'p', 'MarkerSize', 14, 'LineWidth', 2);
+text(tx_pos(1), tx_pos(2), '  TX', 'FontWeight', 'bold', 'VerticalAlignment','middle');
+
+% draw scatterers
+for n = 1:size(scatterTable,1)
+    rectangle('Position', [scatterTable(n,1), scatterTable(n,2), scatterTable(n,4), scatterTable(n,5)], 'LineWidth', 1.2);
+    text(scatterTable(n,1), scatterTable(n,2), sprintf(' S%d', n), 'FontWeight','bold', 'VerticalAlignment','bottom');
+end
+
+% highlight large-error points (top percentile)
+thr = prctile(abs_res, opt.topPercentile);
+idx_bad = find(abs_res >= thr);
+plot(rx_xy(idx_bad,1), rx_xy(idx_bad,2), 'o', 'MarkerSize', 10, 'LineWidth', 1.8);
+end
