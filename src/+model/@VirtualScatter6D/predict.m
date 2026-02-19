@@ -15,9 +15,9 @@
 %
 % OUTPUTS:
 %   gain_sum   - [Npairs x 1] total gain summed across all paths (LOS + scatterers)
-%   gain_path  - [Npairs x (Ns+1)] per-path gains where columns represent
+%   gain_path  - [Npairs x Ns + 1] per-path gains where columns represent
 %                LOS path and individual scatterer contributions
-%   gamma_path - [Npairs x (Ns+1)] basis feature coefficient values per path
+%   gamma_path - [Npairs x Ns + 1] basis feature coefficient values per path
 %
 % NOTES:
 %   - Requires obj.scatterInfo to be populated via train() method
@@ -38,7 +38,7 @@ end
 
 Ns = size(obj.SceneSpec.scatterTable, 1);
 Mcent = obj.NumCenters;
-Kfeat = Mcent*Mcent;
+Kfeat = Mcent*Mcent; % physical-scatterer feature count
 Mobs = size(pairsTR,1);
 
 % ---- get geometry weights and basis features ----------------
@@ -47,16 +47,22 @@ Mobs = size(pairsTR,1);
 [Geometry, Scattering] = obj.TypesSector(pairsTR);
 
 % ---------------- compute per-path gamma and gains ----------------
-% gamma per path: gamma_path(i,p) = Phi_block(i,p,:) * beta_p
-% Vectorized via reshaping:
-beta_mat = reshape(obj.scatterInfo.beta_all, Kfeat, (Ns+1)); % [Kfeat x (Ns+1)]
-Phi3 = reshape(Scattering.', Kfeat, (Ns+1), Mobs); % [Kfeat x (Ns+1) x Mobs]
-Phi3 = permute(Phi3, [3 2 1]); % [Mobs x (Ns+1) x Kfeat]
+beta_all = obj.scatterInfo.beta_all(:);
 
-% Multiply along Kfeat:
-% gamma_path = sum_k Phi3(:,:,k) * Beta2(k,:)  (broadcast)
-gamma_path = sum(Phi3 .* permute(beta_mat, [3 2 1]), 3);
-gamma_path = reshape(gamma_path, Mobs, Ns+1);
+% - TX path has one scalar gain parameter
+% - Each physical scatterer keeps Kfeat angular parameters
+beta_tx = beta_all(1);
+beta_sc = reshape(beta_all(2:end), Kfeat, Ns); % [Kfeat x Ns]
+
+PhiSc = Scattering(:, Kfeat+1:end);            % [Mobs x Ns*Kfeat]
+Phi3s = reshape(PhiSc.', Kfeat, Ns, Mobs);     % [Kfeat x Ns x Mobs]
+Phi3s = permute(Phi3s, [3 2 1]);               % [Mobs x Ns x Kfeat]
+g_sc = sum(Phi3s .* permute(beta_sc, [3 2 1]), 3); % [Mobs x Ns]
+
+gamma_path = zeros(Mobs, Ns+1);
+gamma_path(:,1) = beta_tx;
+gamma_path(:,2:end) = g_sc;
+
 % Per-path gain: gain_path = W .* gamma_path
 gain_path = Geometry .* gamma_path; % [Mobs x (Ns+1)]
 % Total gain:

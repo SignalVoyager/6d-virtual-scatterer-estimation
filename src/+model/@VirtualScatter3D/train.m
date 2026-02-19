@@ -26,6 +26,7 @@
 %
 % SOLVER OPTIONS:
 %   "LS-Ridge" - Ridge regression with automatic lambda scaling
+%   "LS-Ridge-Old" - Ridge regression with fixed lambda (legacy)
 %   "LS"       - Standard least squares (backslash operator)
 %   "NNLS"     - Non-negative least squares
 %
@@ -55,7 +56,7 @@ end
 trainSet = obj.raytracingResults.trainSet;
 Ns    = size(obj.SceneSpec.scatterTable, 1);
 Mcent = obj.NumCenters;
-Kfeat = Mcent; % 3D baseline: omega_out only
+Kfeat = Mcent; % 3D baseline: omega_out only (for physical scatterers)
 
 txList = unique(trainSet(:,1), 'stable');
 txModels = repmat(struct('txIdx',[], 'beta_all',[], 'scatterers',[]), numel(txList), 1);
@@ -70,7 +71,14 @@ for k = 1:numel(txList)
     y       = subSet(:,3);
 
     [Geometry, Scattering] = obj.TypesSectorTx(pairsTR);
-    A = Scattering .* repelem(Geometry, 1, Kfeat);
+
+    % Parameterization:
+    % - TX (LOS) path: single scalar (no sector expansion)
+    % - Physical scatterers: Kfeat sectors per scatterer
+    PhiSc = Scattering(:, Kfeat+1:end);                    % [Mobs x Ns*Kfeat]
+    A_tx = Geometry(:,1);                                  % [Mobs x 1]
+    A_sc = PhiSc .* repelem(Geometry(:,2:end), 1, Kfeat); % [Mobs x Ns*Kfeat]
+    A = [A_tx, A_sc];                                      % [Mobs x (1+Ns*Kfeat)]
 
     % ---- numeric scaling ----
     s = rms(y);
@@ -80,6 +88,16 @@ for k = 1:numel(txList)
     % ---- solve ----
     switch obj.Solver
         case "LS-Ridge"
+            % Stable ridge via augmented least squares.
+            % Keep TX scalar (first coefficient) unregularized.
+            pdim = size(A_w, 2);
+            AtA = A_w.' * A_w;
+            lambda = max(1e-10, 1e-4 * trace(AtA) / max(pdim,1));
+            regW = ones(pdim,1);
+            regW(1) = 0;
+            L = spdiags(sqrt(lambda) * regW, 0, pdim, pdim);
+            beta = [A_w; L] \ [y_w; zeros(pdim,1)];
+        case "LS-Ridge-Old"
             AtA = A_w.' * A_w;
             Aty = A_w.' * y_w;
             lambda = 1e-8 * trace(AtA) / max(size(AtA,1),1);
@@ -94,11 +112,11 @@ for k = 1:numel(txList)
 
     % ---- pack scatterers (optional convenience, matches 6D style) ----
     scatterers = repmat(struct('id',[], 'sourceType',"", 'beta',[]), 1, Ns+1);
-    scatterers(1).id = 0; scatterers(1).sourceType = "tx"; scatterers(1).beta = beta(1:Kfeat);
+    scatterers(1).id = 0; scatterers(1).sourceType = "tx"; scatterers(1).beta = beta(1);
     for n = 1:Ns
         scatterers(n+1).id = n;
         scatterers(n+1).sourceType = "physical";
-        scatterers(n+1).beta = beta(Kfeat + (n-1)*Kfeat + (1:Kfeat));
+        scatterers(n+1).beta = beta(1 + (n-1)*Kfeat + (1:Kfeat));
     end
 
     txModels(k).txIdx      = txIdx;
@@ -110,7 +128,7 @@ end
 
 obj.scatterInfo = struct( ...
     'txModels', txModels, ...
-    'meta', struct('NumCenters',Mcent,'Kfeat',Kfeat,'Ns',Ns,'Solver',obj.Solver) ...
+    'meta', struct('NumCenters',Mcent,'KfeatTx',1,'KfeatSc',Kfeat,'Ns',Ns,'Solver',obj.Solver) ...
 );
 
 if mode == "save"

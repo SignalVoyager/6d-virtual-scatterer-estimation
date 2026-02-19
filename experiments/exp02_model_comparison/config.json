@@ -68,7 +68,7 @@
         "radiationMin": 10,
         "radiationMax": 20
       },
-      "sceneMode": "save"
+      "sceneMode": "load"
     },
     {
       "name": "list_anchor_fullrx",
@@ -87,13 +87,13 @@
         ],
         "rxNum": -1
       },
-      "sceneMode": "save"
+      "sceneMode": "load"
     },
     {
       "name": "list_anchor_geomrx",
       "Nt_side": 2,
       "Nr_side": 2,
-      "dataMode": "save",
+      "dataMode": "load",
       "samplingMode": "list-geom",
       "path": "data/list_anchor_geomrx.mat",
       "samplingArgs": {
@@ -110,7 +110,7 @@
         "dedupRx": true,
         "oneBlockPerTx": true
       },
-      "sceneMode": "save"
+      "sceneMode": "load"
     }
   ],
   "models": {
@@ -142,7 +142,7 @@
         "PathLossExp": 2.0,
         "RefDistance": 1.0,
         "EpsDist": 0.001,
-        "Solver": "LS"
+        "Solver": "LS-Ridge"
       }
     }
   },

@@ -59,7 +59,7 @@
       "name": "geom_scatter_focus",
       "Nt_side": 2,
       "Nr_side": 2,
-      "dataMode": "save",
+      "dataMode": "load",
       "samplingMode": "geom-geom",
       "path": "data/geom_scatter_focus.mat",
       "samplingArgs": {
@@ -68,13 +68,13 @@
         "radiationMin": 10,
         "radiationMax": 20
       },
-      "sceneMode": "save"
+      "sceneMode": "load"
     },
     {
       "name": "list_anchor_fullrx",
       "Nt_side": 2,
       "Nr_side": 2,
-      "dataMode": "save",
+      "dataMode": "load",
       "samplingMode": "list-rand",
       "path": "data/list_anchor_fullrx.mat",
       "samplingArgs": {
@@ -87,7 +87,7 @@
         ],
         "rxNum": -1
       },
-      "sceneMode": "save"
+      "sceneMode": "load"
     }
   ],
   "models": {

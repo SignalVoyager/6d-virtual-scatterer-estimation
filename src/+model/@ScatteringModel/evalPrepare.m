@@ -45,17 +45,20 @@ switch whichSet
     otherwise
         error('evalPrepare: whichSet must be "test","train","all".');
 end
+if isempty(data)
+    error('evalPrepare: selected dataset "%s" is empty.', whichSet);
+end
 
 % predict
 [gain_sum, ~, ~] = obj.predict(data(:,1:2));
 
 y_mW    = data(:,3);
 yhat_mW = gain_sum(:);
-res_mW  = y_mW - yhat_mW;
 
 % noise floor projection (linear domain)
 % If you use utils package: utils.applyNoiseFloor
 [y_mW, yhat_mW] = applyNoiseFloor(y_mW, yhat_mW, opt.q, opt.eps_min);
+res_mW  = y_mW - yhat_mW;
 
 % valid mask for dB-domain plots
 valid = ~isnan(y_mW) & ~isinf(y_mW) & (y_mW > 0) & ...
@@ -75,4 +78,9 @@ P.valid   = valid;
 P.y_dBm   = y_dBm;
 P.yhat_dBm= yhat_dBm;
 P.err_dB  = err_dB;
+P.nTotal  = numel(y_mW);
+P.nValid  = nnz(valid);
+if isfield(opt, "scoreSpec")
+    P.scoreSpec = opt.scoreSpec;
+end
 end

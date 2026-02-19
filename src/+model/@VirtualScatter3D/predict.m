@@ -15,8 +15,8 @@
 %
 % OUTPUT:
 %   gain_sum  - [Npairs x 1] total gain per observation pair (sum across all paths)
-%   gain_path - [Npairs x (Ns+1)] per-path gains including LOS and Ns scatter paths
-%   gamma_path- [Npairs x (Ns+1)] per-path gamma coefficients (basis feature projections)
+%   gain_path - [Npairs x Ns+1] per-path gains including LOS and Ns scatter paths
+%   gamma_path- [Npairs x Ns+1] per-path gamma coefficients (basis feature projections)
 %
 % NOTES:
 %   - Requires obj.train() to be called first to populate txModels
@@ -38,7 +38,7 @@ end
 
 Ns    = size(obj.SceneSpec.scatterTable, 1);
 Mcent = obj.NumCenters;
-Kfeat = Mcent;
+Kfeat = Mcent; % physical-scatterer feature count
 
 Mobs = size(pairsTR,1);
 gain_sum  = zeros(Mobs,1);
@@ -67,16 +67,21 @@ for u = 1:numel(uniqTx)
     [Geometry, Scattering] = obj.TypesSectorTx(pairsTR(mask,:));
 
     % ---------------- compute per-path gamma and gains ----------------
-    % gamma per path: gamma_path(i,p) = Phi_block(i,p,:) * beta_p
-    % Vectorized via reshaping:
-    beta_mat = reshape(txModels(j).beta_all, Kfeat, (Ns+1));                 % [Kfeat x (Ns+1)]
-    Phi3 = reshape(Scattering.', Kfeat, (Ns+1), sum(mask));      % [Kfeat x (Ns+1) x Msub]
-    Phi3 = permute(Phi3, [3 2 1]);                               % [Msub x (Ns+1) x Kfeat]
+    beta_all = txModels(j).beta_all(:);
+    % - TX path has one scalar gain parameter
+    % - Each physical scatterer keeps Kfeat angular parameters
+    beta_tx = beta_all(1);
+    beta_sc = reshape(beta_all(2:end), Kfeat, Ns); % [Kfeat x Ns]
 
-    % Multiply along Kfeat:
-    % gamma_path = sum_k Phi3(:,:,k) * Beta2(k,:)  (broadcast)
-    gpath = sum(Phi3 .* permute(beta_mat, [3 2 1]), 3);          % [Msub x (Ns+1)]
-    gpath = reshape(gpath, sum(mask), Ns+1);
+    PhiSc = Scattering(:, Kfeat+1:end);            % [Msub x Ns*Kfeat]
+    Phi3s = reshape(PhiSc.', Kfeat, Ns, sum(mask));% [Kfeat x Ns x Msub]
+    Phi3s = permute(Phi3s, [3 2 1]);               % [Msub x Ns x Kfeat]
+    g_sc = sum(Phi3s .* permute(beta_sc, [3 2 1]), 3); % [Msub x Ns]
+
+    gpath = zeros(sum(mask), Ns+1);
+    gpath(:,1) = beta_tx;
+    gpath(:,2:end) = g_sc;
+
     gamma_path(mask,:) = gpath; %[Msub x (Ns+1)]
     % Per-path gain: gain_path = W .* gamma_path
     gain_path(mask,:)  = Geometry .* gpath; % [Msub x (Ns+1)]

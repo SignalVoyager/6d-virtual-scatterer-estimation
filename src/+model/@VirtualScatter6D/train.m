@@ -7,7 +7,7 @@
 % DESCRIPTION:
 %   Trains the virtual scatterer model by solving a least-squares regression problem
 %   to estimate scattering coefficients (beta) from raytracing data. Supports multiple
-%   solvers (LS, LS-Ridge, NNLS) and can load/save trained models.
+%   solvers (LS, LS-Ridge, NNLS, LS-Ridge-Old) and can load/save trained models.
 %
 % INPUT ARGUMENTS:
 %   obj       - VirtualScatter6D object to train
@@ -56,15 +56,22 @@ end
 trainSet = obj.raytracingResults.trainSet;
 Ns = size(obj.SceneSpec.scatterTable, 1);
 Mcent = obj.NumCenters;
-Kfeat = Mcent*Mcent;
+Kfeat = Mcent*Mcent; % physical-scatterer feature count
 
-fprintf('[VirtualScatter6D.train] Training with %d samples, %d catterers, %d features per scatterer\n', size(trainSet,1), Ns, Kfeat);
+fprintf('[VirtualScatter6D.train] Training with %d samples, %d scatterers, %d features per physical scatterer\n', size(trainSet,1), Ns, Kfeat);
 
 pairsTR = trainSet(:,1:2);
 y = trainSet(:,3);
 
 [Geometry, Scattering] = obj.TypesSector(pairsTR);
-A = Scattering .* repelem(Geometry, 1, Kfeat);
+
+% Parameterization:
+% - TX (LOS) path: single scalar (no sector x sector expansion)
+% - Physical scatterers: Kfeat=(Mcent^2) sectors per scatterer
+PhiSc = Scattering(:, Kfeat+1:end);                    % [Mobs x Ns*Kfeat]
+A_tx = Geometry(:,1);                                  % [Mobs x 1]
+A_sc = PhiSc .* repelem(Geometry(:,2:end), 1, Kfeat); % [Mobs x Ns*Kfeat]
+A = [A_tx, A_sc];                                      % [Mobs x (1+Ns*Kfeat)]
 
 % ---- numeric scaling ----
 s = rms(y); 
@@ -74,9 +81,19 @@ A_w = A / s; y_w = y / s;
 % ---- solve ----
 switch obj.Solver
     case "LS-Ridge"
+        % Stable ridge via augmented least squares.
+        % Keep TX scalar (first coefficient) unregularized.
+        pdim = size(A_w, 2);
+        AtA = A_w.' * A_w;
+        lambda = max(1e-10, 1e-4 * trace(AtA) / max(pdim,1));
+        regW = ones(pdim,1);
+        regW(1) = 0;
+        L = spdiags(sqrt(lambda) * regW, 0, pdim, pdim);
+        beta = [A_w; L] \ [y_w; zeros(pdim,1)];
+    case "LS-Ridge-Old"
         AtA = A_w.' * A_w;
         Aty = A_w.' * y_w;
-        lambda = 1e-8 * trace(AtA) / size(AtA,1);
+        lambda = 1e-8 * trace(AtA) / max(size(AtA,1),1);
         beta = (AtA + lambda * speye(size(AtA,1))) \ Aty;
     case "LS"
         beta = A_w \ y_w;
@@ -88,17 +105,17 @@ end
 
 % ---- pack scatterers ----
 scatterers = repmat(struct('id',[], 'sourceType',"", 'beta',[]), 1, Ns+1);
-scatterers(1).id = 0; scatterers(1).sourceType = "tx"; scatterers(1).beta = beta(1:Kfeat);
+scatterers(1).id = 0; scatterers(1).sourceType = "tx"; scatterers(1).beta = beta(1);
 for n = 1:Ns
     scatterers(n+1).id = n;
     scatterers(n+1).sourceType = "physical";
-    scatterers(n+1).beta = beta(Kfeat + (n-1)*Kfeat + (1:Kfeat));
+    scatterers(n+1).beta = beta(1 + (n-1)*Kfeat + (1:Kfeat));
 end
 
 obj.scatterInfo = struct( ...
     'scatterers', scatterers, ...
     'beta_all',   beta(:), ...
-    'meta', struct('NumCenters',Mcent,'Kfeat',Kfeat,'Ns',Ns,'Solver',obj.Solver) ...
+    'meta', struct('NumCenters',Mcent,'KfeatTx',1,'KfeatSc',Kfeat,'Ns',Ns,'Solver',obj.Solver) ...
 );
 
 if mode == "save"
