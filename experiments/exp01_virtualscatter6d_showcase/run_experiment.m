@@ -1,4 +1,4 @@
-% run_experiment.m (SHOWCASE)
+﻿% run_experiment.m (SHOWCASE)
 % Inputs injected by main_all_experiments.m:
 %   expRoot, seed
 
@@ -27,9 +27,10 @@ params.gridSize = cfg.grid.gridSize;
 params.tx_pos_z = cfg.grid.tx_pos_z;
 params.rx_pos_z = cfg.grid.rx_pos_z;
 
-preset = string(cfg.activeScenePreset);
-scene  = cfg.scenePresets.(preset);
+preset = string(cfg.scenes.activeScenePreset);
+scene  = cfg.scenes.(preset);
 params.scatterTable = scene.scatterTable;
+sceneModeCfg = string(scene.sceneMode);
 
 % model response file inside experiment
 modelKey = string(cfg.models.activeModel);        % "VirtualScatter6D"
@@ -51,7 +52,7 @@ for i = 1:numel(dataSetList)
 
     dataSetCache.(dsName) = envObj.generateDataset( ...
         ds.Nt_side, ds.Nr_side, ...
-        ds.dataMode, ds.sceneMode, dsPath, ...
+        ds.dataMode, sceneModeCfg, dsPath, ...
         "samplingMode", samplingMode, ...
         "samplingArgs", samplingArgs);
 end
@@ -65,6 +66,9 @@ trainSet = dataSetCache.(trainKey);
 testSet  = dataSetCache.(testKey);
 raytracingResults = struct("trainSet", trainSet, "testSet", testSet);
 envObj.raytracingResults = raytracingResults;
+
+% Track figure handles created during this script run only
+figsBefore = findall(0, 'Type', 'figure');
 
 % ---------- Step 2) Environment plots (save to outputs) ----------
 try
@@ -102,21 +106,36 @@ end
 
 modelObj.train("mode","save");
 
-opt = struct();
-opt.whichSet   = "test";
-opt.doPdf      = true;
-opt.doCgm      = true;
-opt.doResidual = true;
-opt.txGridList = cfg.plots.diagTxGridList;
+% ---------- Step 4) evaluation options (aligned with exp02 schema) ----------
+eopt = struct();
+if isfield(cfg, "evaluation")
+    E = cfg.evaluation;
+    if isfield(E, "whichSet"),   eopt.whichSet = string(E.whichSet); else, eopt.whichSet = "test"; end
+    if isfield(E, "doPdf"),      eopt.doPdf = E.doPdf; else, eopt.doPdf = true; end
+    if isfield(E, "doCgm"),      eopt.doCgm = E.doCgm; else, eopt.doCgm = true; end
+    if isfield(E, "doResidual"), eopt.doResidual = E.doResidual; else, eopt.doResidual = true; end
+    if isfield(E, "txGridList")
+        eopt.txGridList = E.txGridList;
+    elseif isfield(cfg, "plots") && isfield(cfg.plots, "diagTxGridList")
+        eopt.txGridList = cfg.plots.diagTxGridList; % backward compatibility
+    end
+else
+    eopt.whichSet = "test"; eopt.doPdf = true; eopt.doCgm = true; eopt.doResidual = true;
+    if isfield(cfg, "plots") && isfield(cfg.plots, "diagTxGridList")
+        eopt.txGridList = cfg.plots.diagTxGridList; % backward compatibility
+    end
+end
 
-modelObj.evaluate(opt);
+modelObj.evaluate(eopt);
 
-% ---------- Save all figures produced so far ----------
+% ---------- Save figures created by this script run only ----------
 if isfield(cfg.plots, "saveFigures") && cfg.plots.saveFigures
-    figs = findall(0, 'Type', 'figure');
+    figsAfter = findall(0, 'Type', 'figure');
+    figs = setdiff(figsAfter, figsBefore);
     for i = 1:numel(figs)
         saveas(figs(i), fullfile(outDir, sprintf("showcase_fig_%02d_seed%d.png", i, seed)));
     end
 end
 
 fprintf("[SHOWCASE] Done. preset=%s, outputs=%s\n", preset, outDir);
+

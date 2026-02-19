@@ -114,9 +114,4 @@ P_py = py_sigstrength( ...
 % ---- normalize shape to [NrxSamp x NtxSamp] double ----
 P_dBm = double(P_py);
 
-% 关键：你要在这里把形�?归一�?，不要把转置散落在主流程�?
-% 如果你的 python 端返回的�?[NtxSamp x NrxSamp]，就在这里转置：
-if size(P_dBm,1) == size(txPos,2) && size(P_dBm,2) == size(rxPos,2)
-    P_dBm = P_dBm.';  % -> [NrxSamp x NtxSamp]
-end
 end

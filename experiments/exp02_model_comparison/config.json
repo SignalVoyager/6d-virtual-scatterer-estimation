@@ -17,7 +17,8 @@
     "tx_pos_z": 9.0,
     "rx_pos_z": 0.5
   },
-  "scenePresets": {
+  "scenes": {
+    "activeScenePreset": "sparse",
     "dense": {
       "name": "dense",
       "scatterTable": [
@@ -38,7 +39,9 @@
         [-135.0, -120.0, 0.0, 42.0, 16.0, 22.0],
         [-35.0, -125.0, 0.0, 34.0, 14.0, 13.0],
         [70.0, -130.0, 0.0, 38.0, 15.0, 14.0]
-      ]
+      ],
+      "sceneMode": "load",
+      "source": "scatterTable"
     },
     "sparse": {
       "name": "sparse",
@@ -50,15 +53,16 @@
         [36.5, 18.8, 0.0, 3.5, 11.3, 27.0],
         [56.6, 42.0, 0.0, 8.8, 5.8, 11.0],
         [72.3, -42.4, 0.0, 14.0, 9.4, 10.0]
-      ]
+      ],
+      "sceneMode": "load",
+      "source": "scatterTable"
     }
   },
-  "activeScenePreset": "sparse",
   "dataSetList": [
     {
       "name": "geom_scatter_focus",
-      "Nt_side": 2,
-      "Nr_side": 2,
+      "Nt_side": 4,
+      "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "geom-geom",
       "path": "data/geom_scatter_focus.mat",
@@ -67,13 +71,12 @@
         "rxNumPerSc": 4,
         "radiationMin": 10,
         "radiationMax": 20
-      },
-      "sceneMode": "load"
+      }
     },
     {
       "name": "list_anchor_fullrx",
-      "Nt_side": 2,
-      "Nr_side": 2,
+      "Nt_side": 4,
+      "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "list-rand",
       "path": "data/list_anchor_fullrx.mat",
@@ -86,13 +89,12 @@
           [4, 56]
         ],
         "rxNum": -1
-      },
-      "sceneMode": "load"
+      }
     },
     {
       "name": "list_anchor_geomrx",
-      "Nt_side": 2,
-      "Nr_side": 2,
+      "Nt_side": 4,
+      "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "list-geom",
       "path": "data/list_anchor_geomrx.mat",
@@ -109,8 +111,7 @@
         "radiationMax": 20,
         "dedupRx": true,
         "oneBlockPerTx": true
-      },
-      "sceneMode": "load"
+      }
     }
   ],
   "models": {
@@ -149,10 +150,16 @@
   "evaluation": {
     "whichSet": "test",
     "txGridList": [
-      [30, 20]
+      [30, 30]
     ],
     "doPdf": false,
-    "doCgm": false,
-    "doResidual": false
+    "doCgm": true,
+    "doResidual": true
+  },
+  "plots": {
+    "envTxHeatmapOrders": [1, 2, 3, 4, 5],
+    "doRxCount": true,
+    "doTxCount": true,
+    "saveFigures": true
   }
 }

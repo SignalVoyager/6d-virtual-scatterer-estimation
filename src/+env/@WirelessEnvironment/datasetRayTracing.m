@@ -46,7 +46,7 @@ for b = 1:numel(Blocks)
     % ---- backend call, normalized: P_dBm is [NrxSamp x NtxSamp] ----
     [P_dBm, state] = rtCall(txPos, rxPos, spec, path, state);
 
-    P_mW = 10.^(P_dBm/10);
+    P_mW = 10.^(P_dBm/10).';
 
     % --- grid-averaged power: avgGrid(rx, tx) ---
     P4 = reshape(P_mW, meta.Ns_rx, meta.Nrx, meta.Ns_tx, meta.Ntx);  % [Ns_rx x Nrx x Ns_tx x Ntx]

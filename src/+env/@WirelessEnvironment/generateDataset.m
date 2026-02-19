@@ -50,7 +50,7 @@ switch dataMode
         fprintf('[WirelessEnvironment] Calling ray tracing model (samplingMode=%s) ...\n', samplingMode);
         samplingPlans = obj.datasetSampling(samplingMode, samplingArgs{:});
 
-        Results = obj.datasetRayTracing(samplingPlans, Nt_side, Nr_side, "sionna");
+        Results = obj.datasetRayTracing(samplingPlans, Nt_side, Nr_side, "matlab");
         obj.saveDataset(filePath, Results);
 
     otherwise
