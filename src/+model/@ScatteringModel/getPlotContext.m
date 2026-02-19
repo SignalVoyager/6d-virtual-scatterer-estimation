@@ -1,6 +1,31 @@
+%% getPlotContext
+% Build common grid/scene context for plotting routines.
+%
+% This function generates a structured output containing grid coordinates,
+% axis centers, and a mask identifying grid cells that overlap with any
+% scatterers in the scene. The invalid mask marks cells that intersect with
+% scatterer bounding boxes (including a buffer zone of half grid size).
+%
+% Syntax:
+%   C = getPlotContext(obj)
+%
+% Output:
+%   C (struct) - Plot context structure with fields:
+%       .scatterTable   - Copy of scene specification scatter table
+%       .gridSize       - Grid cell size (scalar)
+%       .areaSize       - Total area dimensions [width, height]
+%       .Kx             - Number of grid cells in x-direction
+%       .Ky             - Number of grid cells in y-direction
+%       .K              - Total number of grid cells (Kx * Ky)
+%       .xCenters       - X-axis coordinates of grid cell centers (1 x Kx)
+%       .yCenters       - Y-axis coordinates of grid cell centers (1 x Ky)
+%       .invalidMask    - Boolean mask marking cells overlapping scatterers (Ky x Kx)
+%
+% Notes:
+%   - Grid is centered at origin with cells aligned to gridSize intervals
+%   - Invalid mask accounts for scatterer size and applies gridSize/2 buffer
+%   - Mask is reshaped to 2D grid coordinates (Ky x Kx)
 function C = getPlotContext(obj)
-% getPlotContext - build common grid/scene context for plotting routines.
-% Includes axis centers and an invalid-grid mask around scatterers.
 scatterTable = obj.SceneSpec.scatterTable;
 gridSize = obj.GridSpec.gridSize;
 areaSize = obj.GridSpec.areaSize;

@@ -1,6 +1,4 @@
 function Results = datasetRayTracing(obj, Blocks, Nt_side, Nr_side, mode)
-% datasetRayTracing - run backend ray tracing and return grid-level averaged powers.
-% The output matrix format is [txGridIdx, rxGridIdx, power_mW].
 if isempty(Blocks)
     Results = zeros(0,3);
     return;

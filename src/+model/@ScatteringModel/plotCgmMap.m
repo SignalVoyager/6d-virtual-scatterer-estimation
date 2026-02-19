@@ -1,8 +1,35 @@
-function plotCgmMap(obj, txGrid, opt)
-% plotCgmMap - visualize predicted receiver power map (CGM) for one TX grid.
-% Values are shown in dBm and invalid grids are excluded from prediction.
-if nargin < 3 || isempty(opt), opt = struct(); end
-
+% plotCgmMap - Visualize predicted receiver power map (CGM) for one TX grid position.
+%
+% Syntax:
+%   plotCgmMap(obj, txGrid)
+%   plotCgmMap(obj, txGrid, opt)
+%
+% Description:
+%   Generates a 2D power map visualization showing predicted receiver power levels
+%   for all valid grid points with respect to a single transmitter grid position.
+%   Power values are displayed in dBm with invalid grids excluded from the prediction.
+%   The visualization includes transmitter location, grid cells, and scatterer 
+%   positions overlaid on the power map.
+%
+% Input Arguments:
+%   obj     - ScatteringModel object containing the model configuration and prediction method
+%   txGrid  - [Ntx x 2] array of transmitter grid positions in [col, row] format
+%             where col is in range [1, Kx] and row is in range [1, Ky]
+%   opt     - (optional) Configuration structure for plotting options (default: empty struct)
+%
+% Output:
+%   None. Displays a figure with the power map visualization.
+%
+% Notes:
+%   - Invalid grid points are excluded from power prediction
+%   - Power values are clipped to display range [1st percentile, 99th percentile]
+%   - Transmitter position is marked with a 'p' marker
+%   - Scatterer rectangles and labels are overlaid on the map
+%   - Axes are set to equal aspect ratio with normal y-direction orientation
+%
+% See Also:
+%   predict, getPlotContext, sub2ind
+function plotCgmMap(obj, txGrid, ~)
 C = obj.getPlotContext();
 Kx = C.Kx; Ky = C.Ky; K = C.K;
 xCenters = C.xCenters; yCenters = C.yCenters;

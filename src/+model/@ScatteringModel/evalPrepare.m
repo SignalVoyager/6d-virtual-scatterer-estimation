@@ -1,6 +1,34 @@
+%EVALPREPARE Prepare evaluation metrics and data for model assessment
+%   P = EVALPREPARE(OBJ, WHICHSET, OPT) packages evaluation essentials
+%   including predictions, residuals, and error metrics in both linear
+%   and dB domains with noise floor handling.
+%
+%   Input Arguments:
+%       OBJ         - ScatteringModel instance
+%       WHICHSET    - String specifying dataset: "test", "train", or "all"
+%       OPT         - Optional struct with configuration parameters:
+%           .q          - Quantile for noise floor (default: 0.02)
+%           .eps_min    - Minimum threshold for linear domain (default: 1e-12)
+%           .eps_mW     - Minimum threshold for dB conversion (default: 1e-12)
+%
+%   Output Arguments:
+%       P           - Struct containing:
+%           .data       - Original input data [positions, measurements]
+%           .y_mW       - Ground truth power (linear, mW)
+%           .yhat_mW    - Predicted power (linear, mW)
+%           .res_mW     - Linear domain residuals
+%           .valid      - Logical mask for valid measurements
+%           .y_dBm      - Ground truth power (dB domain)
+%           .yhat_dBm   - Predicted power (dB domain)
+%           .err_dB     - dB domain error
+%
+%   Notes:
+%       - Applies noise floor projection before dB conversion
+%       - Validates measurements for NaN, Inf, and positivity
+%       - Safe dB conversion using eps_mW threshold
+%
+%   See also: PREDICT, APPLYNOISEFLOOR
 function P = evalPrepare(obj, whichSet, opt)
-% P: struct packing evaluation essentials
-
 if nargin < 3 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"q"), opt.q = 0.02; end
 if ~isfield(opt,"eps_min"), opt.eps_min = 1e-12; end

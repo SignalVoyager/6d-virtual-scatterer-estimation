@@ -68,8 +68,14 @@ classdef VirtualScatter3D < model.ScatteringModel
         %     train(obj, "mode","save")  -> train then saveModel()
         %     train(obj) or train(obj,"mode","fit") -> just train
         train(obj, varargin)
-        
+
+        % [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR)
+        %   Linear power prediction in mW.
         [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR)
+
+
+        % evaluate(obj, opt)
+        %   Example evaluation pipeline calling base metrics and optional plots.
         evaluate(obj, opt)
     end
 

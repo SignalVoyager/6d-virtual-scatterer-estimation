@@ -18,7 +18,7 @@ classdef WirelessEnvironment < handle
 
     properties
         % -------- Runtime state (mutable) --------
-        raytracingResults % struct/table: trainSet/testSet/metadata etc. (you control)
+        raytracingResults % optional cache, e.g., struct("trainSet",...,"testSet",...)
     end
 
     % ============================================================
@@ -72,8 +72,7 @@ classdef WirelessEnvironment < handle
         datasetScene(obj, mode)
 
         % Blocks = datasetSampling(obj, mode, varargin)
-        %   mode: "rand-rand" | "geom-geom" | "list-rand" | "randblock-randblock"
-        %
+        %   mode: "rand-rand" | "geom-geom" | "list-rand" | "randblock-randblock" | "list-geom"
         % Output Blocks (recommended fields):
         %   Blocks(b).txSel : [Ntx x 1] grid indices (linear index over [Ky,Kx])
         %   Blocks(b).rxSel : [Nrx x 1] grid indices
@@ -108,11 +107,12 @@ classdef WirelessEnvironment < handle
         %   Save variable 'Results' to MAT-file (-v7.3 recommended).
         saveDataset(obj, file, data)
 
-        % generateDataset(obj, Nt_side, Nr_side, dataMode, sceneMode, filePath, varargin)
+        % Results = generateDataset(obj, Nt_side, Nr_side, dataMode, sceneMode, filePath, varargin)
         %   dataMode:  "load" | "save" (dataset MAT workflow)
         %   sceneMode: "load" | "save" (scene STL workflow; used when dataMode="save")
-        %   Optional: "isTrain" (logical)
-        generateDataset(obj, Nt_side, Nr_side, dataMode, sceneMode, filePath, varargin)
+        %   Optional: "samplingMode" and "samplingArgs"
+        %   Returns one dataset matrix [N x 3] and does not split train/test internally.
+        Results = generateDataset(obj, Nt_side, Nr_side, dataMode, sceneMode, filePath, varargin)
 
         % evaluate(obj, whichSet, viewMode, varargin)
         %   whichSet: "train" | "test"
@@ -121,3 +121,4 @@ classdef WirelessEnvironment < handle
         evaluate(obj, whichSet, viewMode, varargin)
     end
 end
+

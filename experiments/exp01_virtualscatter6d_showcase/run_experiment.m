@@ -36,17 +36,35 @@ modelKey = string(cfg.models.activeModel);        % "VirtualScatter6D"
 mCfg = cfg.models.(modelKey);
 params.responseFile = fullfile(expRoot, mCfg.responseFile);
 
-% ---------- dataset files ----------
-Nt_side = cfg.dataset.Nt_side;
-Nr_side = cfg.dataset.Nr_side;
-trainFile = fullfile(expRoot, cfg.dataset.trainFile);
-testFile  = fullfile(expRoot, cfg.dataset.testFile);
-
 % ---------- Step 1) Environment + dataset ----------
 envObj = env.WirelessEnvironment(params);
 
-envObj.generateDataset(Nt_side, Nr_side, cfg.dataset.dataMode, cfg.dataset.sceneMode, trainFile, "isTrain", true);
-envObj.generateDataset(Nt_side, Nr_side, cfg.dataset.dataMode, cfg.dataset.sceneMode, testFile,  "isTrain", false);
+% Build all datasets from config.dataSetList
+dataSetList = cfg.dataSetList;
+dataSetCache = struct();
+for i = 1:numel(dataSetList)
+    ds = dataSetList(i);
+    dsName = char(string(ds.name));
+
+    [samplingMode, samplingArgs] = utils.parseSamplingSpec(ds);
+    dsPath = fullfile(expRoot, string(ds.path));
+
+    dataSetCache.(dsName) = envObj.generateDataset( ...
+        ds.Nt_side, ds.Nr_side, ...
+        ds.dataMode, ds.sceneMode, dsPath, ...
+        "samplingMode", samplingMode, ...
+        "samplingArgs", samplingArgs);
+end
+
+% Select train/test datasets by active model mapping
+sel = mCfg.datasetSelection;
+trainKey = char(string(sel.trainSet));
+testKey  = char(string(sel.testSet));
+
+trainSet = dataSetCache.(trainKey);
+testSet  = dataSetCache.(testKey);
+raytracingResults = struct("trainSet", trainSet, "testSet", testSet);
+envObj.raytracingResults = raytracingResults;
 
 % ---------- Step 2) Environment plots (save to outputs) ----------
 try
@@ -69,8 +87,6 @@ catch ME
 end
 
 % ---------- Step 3) Train + evaluate VirtualScatter6D ----------
-raytracingResults = envObj.raytracingResults;
-
 switch modelKey
     case "VirtualScatter6D"
         h = mCfg.hyper;
@@ -91,16 +107,7 @@ opt.whichSet   = "test";
 opt.doPdf      = true;
 opt.doCgm      = true;
 opt.doResidual = true;
-
-if isfield(cfg.plots, "diagTxGridList")
-    txGridList = cfg.plots.diagTxGridList;
-    if iscell(txGridList)
-        txGridList = cell2mat(txGridList);
-    end
-    opt.txGridList = txGridList;
-else
-    opt.txGridList = [30 20];
-end
+opt.txGridList = cfg.plots.diagTxGridList;
 
 modelObj.evaluate(opt);
 
@@ -113,5 +120,3 @@ if isfield(cfg.plots, "saveFigures") && cfg.plots.saveFigures
 end
 
 fprintf("[SHOWCASE] Done. preset=%s, outputs=%s\n", preset, outDir);
-
-

@@ -3,16 +3,20 @@
     "experimentId": "exp02_model_comparison",
     "description": "Benchmark: VirtualScatter6D vs baselines under the same dataset."
   },
-
   "backend": {
     "condaEnv": "D:/Anaconda3/envs/scibase",
     "sionnaModule": "../../src/+utils/sionna_rt_adapter.py"
   },
-
-  "radio": { "fc": 2600000000.0, "Pt_dBm": 30.0 },
-
-  "grid": { "areaSize": [300.0,300.0], "gridSize": 5.0, "tx_pos_z": 9.0, "rx_pos_z": 0.5 },
-
+  "radio": {
+    "fc": 2600000000.0,
+    "Pt_dBm": 30.0
+  },
+  "grid": {
+    "areaSize": [300.0, 300.0],
+    "gridSize": 5.0,
+    "tx_pos_z": 9.0,
+    "rx_pos_z": 0.5
+  },
   "scenePresets": {
     "dense": {
       "name": "dense",
@@ -22,25 +26,20 @@
         [-20.0, 102.0, 0.0, 28.0, 10.0, 15.0],
         [45.0, 95.0, 0.0, 30.0, 11.0, 14.0],
         [105.0, 105.0, 0.0, 34.0, 12.0, 16.0],
-
         [-125.0, 25.0, 0.0, 30.0, 12.0, 13.0],
         [-35.0, 35.0, 0.0, 26.0, 11.0, 11.0],
         [70.0, 45.0, 0.0, 32.0, 14.0, 17.0],
         [110.0, 15.0, 0.0, 28.0, 12.0, 10.0],
-
         [55.0, -10.0, 0.0, 36.0, 14.0, 12.0],
         [-40.0, -30.0, 0.0, 28.0, 12.0, 10.0],
-
         [-120.0, -55.0, 0.0, 40.0, 18.0, 20.0],
         [35.0, -65.0, 0.0, 34.0, 14.0, 11.0],
         [115.0, -55.0, 0.0, 30.0, 12.0, 12.0],
-
         [-135.0, -120.0, 0.0, 42.0, 16.0, 22.0],
         [-35.0, -125.0, 0.0, 34.0, 14.0, 13.0],
         [70.0, -130.0, 0.0, 38.0, 15.0, 14.0]
       ]
     },
-
     "sparse": {
       "name": "sparse",
       "scatterTable": [
@@ -54,46 +53,104 @@
       ]
     }
   },
-  "activeScenePreset": "dense",
-
-  "dataset": {
-    "Nt_side": 2,
-    "Nr_side": 2,
-    "trainFile": "data/TrainSet.mat",
-    "testFile": "data/TestSet.mat",
-    "dataMode": "load",
-    "sceneMode": "load"
-  },
-
+  "activeScenePreset": "sparse",
+  "dataSetList": [
+    {
+      "name": "geom_scatter_focus",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "load",
+      "samplingMode": "geom-geom",
+      "path": "data/geom_scatter_focus.mat",
+      "samplingArgs": {
+        "txNumPerSc": 4,
+        "rxNumPerSc": 4,
+        "radiationMin": 10,
+        "radiationMax": 20
+      },
+      "sceneMode": "save"
+    },
+    {
+      "name": "list_anchor_fullrx",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "load",
+      "samplingMode": "list-rand",
+      "path": "data/list_anchor_fullrx.mat",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [4, 4],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNum": -1
+      },
+      "sceneMode": "save"
+    },
+    {
+      "name": "list_anchor_geomrx",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "save",
+      "samplingMode": "list-geom",
+      "path": "data/list_anchor_geomrx.mat",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [4, 4],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNumPerSc": 4,
+        "radiationMin": 10,
+        "radiationMax": 20,
+        "dedupRx": true,
+        "oneBlockPerTx": true
+      },
+      "sceneMode": "save"
+    }
+  ],
   "models": {
-    "modelList": [
-      "VirtualScatter6D",
-      "BaselineA",
-      "BaselineB"
-    ],
-
+    "modelList": ["VirtualScatter6D", "VirtualScatter3D"],
     "VirtualScatter6D": {
       "modelId": "VirtualScatter6D",
       "responseFile": "data/response_virtualscatter6d.mat",
-      "hyper": { "NumCenters": 4, "PathLossExp": 2.0, "RefDistance": 1.0, "EpsDist": 0.001, "Solver": "LS" }
+      "datasetSelection": {
+        "trainSet": "geom_scatter_focus",
+        "testSet": "list_anchor_fullrx"
+      },
+      "hyper": {
+        "NumCenters": 4,
+        "PathLossExp": 2.0,
+        "RefDistance": 1.0,
+        "EpsDist": 0.001,
+        "Solver": "LS"
+      }
     },
-
-    "BaselineA": {
-      "modelId": "BaselineA",
-      "responseFile": "data/response_baselineA.mat",
-      "hyper": { "someParam": 1 }
-    },
-
-    "BaselineB": {
-      "modelId": "BaselineB",
-      "responseFile": "data/response_baselineB.mat",
-      "hyper": { "someParam": 2 }
+    "VirtualScatter3D": {
+      "modelId": "VirtualScatter3D",
+      "responseFile": "data/response_virtualscatter3d.mat",
+      "datasetSelection": {
+        "trainSet": "list_anchor_geomrx",
+        "testSet": "list_anchor_fullrx"
+      },
+      "hyper": {
+        "NumCenters": 4,
+        "PathLossExp": 2.0,
+        "RefDistance": 1.0,
+        "EpsDist": 0.001,
+        "Solver": "LS"
+      }
     }
   },
-
   "evaluation": {
     "whichSet": "test",
-    "txGridList": [[30,20]],
+    "txGridList": [
+      [30, 20]
+    ],
     "doPdf": false,
     "doCgm": false,
     "doResidual": false

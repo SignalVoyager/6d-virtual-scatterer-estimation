@@ -1,8 +1,48 @@
-function train(obj, varargin)
-% train - fit the model parameters and update obj.scatterInfo
+%% TRAIN Trains the 6D virtual scatterer model using regression
 %
-% Optional name-value:
-%   "mode" : "fit"|"save"|"load" (default "fit")
+% SYNTAX:
+%   train(obj)
+%   train(obj, Name=Value)
+%
+% DESCRIPTION:
+%   Trains the virtual scatterer model by solving a least-squares regression problem
+%   to estimate scattering coefficients (beta) from raytracing data. Supports multiple
+%   solvers (LS, LS-Ridge, NNLS) and can load/save trained models.
+%
+% INPUT ARGUMENTS:
+%   obj       - VirtualScatter6D object to train
+%
+% NAME-VALUE PARAMETERS:
+%   mode      - (string) Operation mode: "fit" (default), "load", or "save"
+%               • "fit"  - Train the model on raytracing data
+%               • "load" - Load pre-trained model from disk
+%               • "save" - Save trained model to disk
+%
+% ALGORITHM:
+%   1. Parses input parameters and checks for model loading
+%   2. Extracts training data from raytracing results
+%   3. Constructs design matrix A by combining geometry and scattering features
+%   4. Applies numerical scaling (RMS normalization) for stability
+%   5. Solves regularized least-squares regression using specified solver:
+%      • LS-Ridge: Ridge regression with automatic lambda selection
+%      • LS: Standard least-squares (backslash operator)
+%      • NNLS: Non-negative least-squares
+%   6. Organizes estimated beta coefficients into scatterer structures
+%   7. Saves model if mode="save"
+%
+% OUTPUT:
+%   Updates obj.scatterInfo with:
+%   • scatterers - Array of structures containing id, sourceType, and beta coefficients
+%   • beta_all   - Complete coefficient vector for all scatterers
+%
+% REMARKS:
+%   - Supports both LoS (transmitter) and NLoS (physical) scatterers
+%   - Commented code includes reciprocity enforcement (symmetrization)
+%   - Numerical scaling improves solver conditioning for ill-posed problems
+%
+% SEE ALSO:
+%   loadModel, saveModel, TypesSector
+function train(obj, varargin)
 p = inputParser;
 p.addParameter("mode", "fit");
 p.parse(varargin{:});
@@ -17,50 +57,38 @@ trainSet = obj.raytracingResults.trainSet;
 Ns = size(obj.SceneSpec.scatterTable, 1);
 Mcent = obj.NumCenters;
 Kfeat = Mcent*Mcent;
-% ---------------- parse options ----------------
-[Geometry, Scattering] = obj.TypesSector(trainSet(:,1:2));
-A = Scattering .* repelem(Geometry, 1, Kfeat);
+
+fprintf('[VirtualScatter6D.train] Training with %d samples, %d catterers, %d features per scatterer\n', size(trainSet,1), Ns, Kfeat);
+
+pairsTR = trainSet(:,1:2);
 y = trainSet(:,3);
 
-% Phi_LoS  = Phi(:, 1:Kfeat);                 % [Mobs x Kfeat]
-% Phi_NLoS = Phi(:, Kfeat+1:end);             % [Mobs x (Ns*Kfeat)]
-% A_LoS = Phi_LoS .* W(:,1);                  % 隐式扩展: [Mobs x Kfeat]
-% A_NLoS = Phi_NLoS .* repelem(W(:,2:end), 1, Kfeat);   % [Mobs x (Ns*Kfeat)]
-% A = [A_LoS, A_NLoS];
+[Geometry, Scattering] = obj.TypesSector(pairsTR);
+A = Scattering .* repelem(Geometry, 1, Kfeat);
 
-fprintf('[VirtualScatter6D.train] Solving NNLS...\n');
-% ---------- (0) 数值稳定性缩放 ----------
-s = rms(y); A_w = A / s; y_w = y / s;
-% ---------- (1) 求解 ----------
+% ---- numeric scaling ----
+s = rms(y); 
+if s <= 0 || ~isfinite(s), s = 1.0; end
+A_w = A / s; y_w = y / s;
+
+% ---- solve ----
 switch obj.Solver
     case "LS-Ridge"
         AtA = A_w.' * A_w;
         Aty = A_w.' * y_w;
         lambda = 1e-8 * trace(AtA) / size(AtA,1);
-        beta = (AtA + lambda * speye(size(AtA,1))) \ Aty;   % beta in scaled system
+        beta = (AtA + lambda * speye(size(AtA,1))) \ Aty;
     case "LS"
-        beta=A_w\y_w;
+        beta = A_w \ y_w;
     case "NNLS"
         beta = lsqnonneg(A_w, y_w); 
     otherwise
-        error("We do not have such solver.");
+        error('[VirtualScatter6D.train] Unknown solver: %s', obj.Solver);
 end
 
-% beta_post = beta;                % 复制一份，避免污染原beta（可选）
-% for n = 0:Ns
-%     idx = n*Kfeat + (1:Kfeat);   % 物理散射体n的beta段（与你现有切片一致）
-%     Gamma = reshape(beta_post(idx), Mcent, Mcent);    % 默认列向量化：Gamma(:)
-% 
-%     Gamma_sym = 0.5 * (Gamma + Gamma.');      % 互易性：对称化
-%     beta_post(idx) = Gamma_sym(:);            % 写回
-% end
-% beta = beta_post;    
-
-% ---------------- write scatterInfo ----------------  
+% ---- pack scatterers ----
 scatterers = repmat(struct('id',[], 'sourceType',"", 'beta',[]), 1, Ns+1);
 scatterers(1).id = 0; scatterers(1).sourceType = "tx"; scatterers(1).beta = beta(1:Kfeat);
-
-% scatterer #1..Ns: physical scatterers / NLoS
 for n = 1:Ns
     scatterers(n+1).id = n;
     scatterers(n+1).sourceType = "physical";
@@ -69,7 +97,8 @@ end
 
 obj.scatterInfo = struct( ...
     'scatterers', scatterers, ...
-    'beta_all',   beta(:) ...
+    'beta_all',   beta(:), ...
+    'meta', struct('NumCenters',Mcent,'Kfeat',Kfeat,'Ns',Ns,'Solver',obj.Solver) ...
 );
 
 if mode == "save"

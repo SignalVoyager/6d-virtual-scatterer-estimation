@@ -1,7 +1,35 @@
+% SAMPGEOMETRYBINS Sample geometry bins by radius and angle
+%
+%   [pool, sel] = SAMPGEOMETRYBINS(pool, gridPos, sc_pos, M, rMin, rMax, removeFlag)
+%
+%   Selects M samples from a pool of indices using a two-step geometric filtering:
+%   1) Candidate filtering by radius range [rMin, rMax)
+%   2) Uniform angular binning: picks one random sample per angle bin (0..2π)
+%
+%   INPUTS:
+%       pool        - Column vector of candidate pool indices
+%       gridPos     - (N x 2) array of grid positions [x, y]
+%       sc_pos      - (1 x 2) row vector of scatterer position [x, y]
+%       M           - Number of angle bins (samples to select)
+%       rMin        - Minimum radius threshold (inclusive)
+%       rMax        - Maximum radius threshold (exclusive)
+%       removeFlag  - Logical flag; if true, removes selected samples from pool
+%
+%   OUTPUTS:
+%       pool        - Updated pool with selected samples removed (if removeFlag=true)
+%       sel         - (M x 1) column vector of selected sample indices
+%
+%   NOTES:
+%       - Angles are computed as atan2(dy, dx) in range [0, 2π)
+%       - Each angular bin must contain at least one radius-filtered candidate
+%       - Selected indices must be unique (collisions trigger error)
+%       - Errors if candidate set is empty or bins cannot be filled
+%
+%   ERRORS:
+%       - 'empty candidate set': No samples within [rMin, rMax)
+%       - 'empty bin': Angle bin m has no valid candidates
+%       - 'reps collided': Duplicate selections across bins; increase pool density
 function [pool, sel] = sampGeometryBins(pool, gridPos, sc_pos, M, rMin, rMax, removeFlag)
-% Two-step:
-% 1) candidate filter by radius
-% 2) pick one per angle bin (0..2pi) using candidates
 pool = pool(:);
 if M <= 0
     sel = zeros(0,1);

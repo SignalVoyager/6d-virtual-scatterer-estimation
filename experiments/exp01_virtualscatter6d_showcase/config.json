@@ -3,24 +3,20 @@
     "experimentId": "exp01_virtualscatter6d_showcase",
     "description": "Showcase of VirtualScatter6D (formerly X2XSingleHop): accuracy + diagnostics + sensitivity."
   },
-
   "backend": {
     "condaEnv": "D:/Anaconda3/envs/scibase",
     "sionnaModule": "../../src/+utils/sionna_rt_adapter.py"
   },
-
   "radio": {
     "fc": 2600000000.0,
     "Pt_dBm": 30.0
   },
-
   "grid": {
     "areaSize": [300.0, 300.0],
     "gridSize": 5.0,
     "tx_pos_z": 9.0,
     "rx_pos_z": 0.5
   },
-
   "scenePresets": {
     "dense": {
       "name": "dense",
@@ -30,25 +26,20 @@
         [-20.0, 102.0, 0.0, 28.0, 10.0, 15.0],
         [45.0, 95.0, 0.0, 30.0, 11.0, 14.0],
         [105.0, 105.0, 0.0, 34.0, 12.0, 16.0],
-
         [-125.0, 25.0, 0.0, 30.0, 12.0, 13.0],
         [-35.0, 35.0, 0.0, 26.0, 11.0, 11.0],
         [70.0, 45.0, 0.0, 32.0, 14.0, 17.0],
         [110.0, 15.0, 0.0, 28.0, 12.0, 10.0],
-
         [55.0, -10.0, 0.0, 36.0, 14.0, 12.0],
         [-40.0, -30.0, 0.0, 28.0, 12.0, 10.0],
-
         [-120.0, -55.0, 0.0, 40.0, 18.0, 20.0],
         [35.0, -65.0, 0.0, 34.0, 14.0, 11.0],
         [115.0, -55.0, 0.0, 30.0, 12.0, 12.0],
-
         [-135.0, -120.0, 0.0, 42.0, 16.0, 22.0],
         [-35.0, -125.0, 0.0, 34.0, 14.0, 13.0],
         [70.0, -130.0, 0.0, 38.0, 15.0, 14.0]
       ]
     },
-
     "sparse": {
       "name": "sparse",
       "scatterTable": [
@@ -62,29 +53,52 @@
       ]
     }
   },
-
   "activeScenePreset": "sparse",
-
-  "dataset": {
-    "Nt_side": 2,
-    "Nr_side": 2,
-    "trainFile": "data/TrainSet.mat",
-    "testFile": "data/TestSet.mat",
-    "dataMode": "save",
-    "sceneMode": "save",
-    "sampling": {
-      "trainMode": "geom-geom",
-      "testMode": "list-rand",
-      "testTxGridList": [[30,30],[4,4],[56,4],[56,56],[4,56]],
-      "testRxNum": -1
+  "dataSetList": [
+    {
+      "name": "geom_scatter_focus",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "save",
+      "samplingMode": "geom-geom",
+      "path": "data/geom_scatter_focus.mat",
+      "samplingArgs": {
+        "txNumPerSc": 4,
+        "rxNumPerSc": 4,
+        "radiationMin": 10,
+        "radiationMax": 20
+      },
+      "sceneMode": "save"
+    },
+    {
+      "name": "list_anchor_fullrx",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "save",
+      "samplingMode": "list-rand",
+      "path": "data/list_anchor_fullrx.mat",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [4, 4],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNum": -1
+      },
+      "sceneMode": "save"
     }
-  },
-
+  ],
   "models": {
     "activeModel": "VirtualScatter6D",
     "VirtualScatter6D": {
       "modelId": "VirtualScatter6D",
       "responseFile": "data/response.mat",
+      "datasetSelection": {
+        "trainSet": "geom_scatter_focus",
+        "testSet": "list_anchor_fullrx"
+      },
       "hyper": {
         "NumCenters": 4,
         "PathLossExp": 2.0,
@@ -94,12 +108,13 @@
       }
     }
   },
-
   "plots": {
-    "envTxHeatmapOrders": [1,2,3,4,5],
+    "envTxHeatmapOrders": [1, 2, 3, 4, 5],
     "doRxCount": true,
     "doTxCount": true,
-    "diagTxGridList": [[30,20]],
+    "diagTxGridList": [
+      [30, 20]
+    ],
     "saveFigures": true
   }
 }

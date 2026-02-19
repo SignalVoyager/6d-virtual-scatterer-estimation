@@ -1,6 +1,32 @@
+%   saveDataset Save dataset to a file
+%
+%   Syntax:
+%       saveDataset(obj, file, data)
+%
+%   Description:
+%       Saves the provided data structure to a MATLAB binary file (.mat) 
+%       in version 7.3 format. The data is stored under the variable name 
+%       'Results'. If the file already exists, it will be overwritten.
+%
+%   Input Arguments:
+%       file    - (string or char) File path where the dataset will be saved.
+%                 Must not be empty.
+%       data    - Structure containing the results to be saved.
+%                 Must not be empty.
+%
+%   Errors:
+%       Throws an error if:
+%       - file path is empty
+%       - data structure is empty
+%
+%   Notes:
+%       - Uses MATLAB format version 7.3 for compatibility with large files
+%       - Automatically overwrites existing files without confirmation
+%       - Displays a confirmation message to the command window upon success
+%
+%   Example:
+%       obj.saveDataset('results.mat', myData);
 function saveDataset(~, file, data)
-% saveDataset - save input data into a MAT file as variable "Results".
-% The file is overwritten using -v7.3 format.
 file = string(file);
 if strlength(file)==0
     error('[WirelessEnvironment] saveDataset: empty file path.');

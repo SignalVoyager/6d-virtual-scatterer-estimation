@@ -1,6 +1,38 @@
-function evalReport(obj, M, B)
-% evalReport - print consolidated evaluation metrics and bucket summaries.
-% Uses a consistent console format shared by all derived models.
+%% evalReport
+% Generates and displays a comprehensive evaluation report of model performance
+% metrics and statistics.
+%
+% Syntax:
+%   evalReport(obj, M, B)
+%
+% Description:
+%   Prints formatted evaluation metrics including mean squared error (MSE),
+%   normalized MSE (NMSE), correlation coefficients, and performance statistics
+%   stratified by output quantile buckets (LOW, MID, HIGH).
+%
+% Input Arguments:
+%   obj - ScatteringModel object instance
+%   M   - struct containing evaluation metrics with fields:
+%         - mse: Mean squared error value
+%         - nmse: Normalized mean squared error
+%         - glo_mse_dB: Global MSE in decibels
+%         - rho_y_yhat: Correlation between actual and predicted outputs
+%         - rho_y_res: Correlation between actual output and residuals
+%         - relRMSE: Relative RMSE (normalized by RMS of actual output)
+%         - ab: 2-element vector [a, b] for linear fit y ≈ a*yhat + b
+%   B   - struct containing bucketed statistics with fields:
+%         - q50: 50th percentile (median) threshold
+%         - q90: 90th percentile threshold
+%         - LOW: struct with metrics for y <= q50 (fields: count, mse, nmse)
+%         - MID: struct with metrics for q50 < y <= q90 (fields: count, mse, nmse)
+%         - HIGH: struct with metrics for y > q90 (fields: count, mse, nmse)
+%
+% Output:
+%   None. Function prints formatted report to command window.
+%
+% See Also:
+%   ScatteringModel
+function evalReport(~, M, B)
 fprintf('[Eval] MSE=%.4e, NMSE=%.4e\n', M.mse, M.nmse);
 fprintf('[Eval] glo_mse_dB=%.6e\n', M.glo_mse_dB);
 

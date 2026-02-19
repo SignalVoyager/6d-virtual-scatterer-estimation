@@ -1,9 +1,50 @@
+%% datasetScene
+% Prepares scene files (STL/PLY/XML) for ray tracing backends by either
+% building a mesh from a scatter table or loading an existing STL file.
+%
+% SYNTAX:
+%   datasetScene(obj)
+%   datasetScene(obj, mode)
+%
+% INPUTS:
+%   obj     - WirelessEnvironment object containing SceneSpec properties
+%   mode    - (optional) Character vector or string specifying operation mode
+%             • "save" (default) - Build mesh from scatterTable and write STL/PLY/XML
+%             • "load"           - Read existing STL from stlFile and regenerate PLY/XML
+%
+% OUTPUTS:
+%   None (writes files to disk)
+%
+% DETAILS:
+%   This method generates three scene description files required for ray 
+%   tracing simulation:
+%   - STL file: 3D mesh geometry containing cuboid scatterers
+%   - PLY file: ASCII point cloud representation of the mesh
+%   - XML file: Mitsuba scene configuration with material properties
+%
+%   In "save" mode, cuboid geometries are constructed from rows in scatterTable
+%   and combined into a single mesh before writing to STL format.
+%
+%   In "load" mode, an existing STL file is read and processed to regenerate
+%   the PLY and XML files. Supports both triangulation objects and struct outputs
+%   from stlread().
+%
+% DEPENDENCIES:
+%   • geomMakeCuboid  - Creates cuboid mesh geometry
+%   • stlwrite        - Writes triangulation to STL file
+%   • stlread         - Reads STL file
+%   • geomWritePlyAscii - Writes ASCII PLY format
+%   • geomWriteMitsubaSceneXml - Generates Mitsuba XML scene
+%
+% ERRORS:
+%   • Unknown mode: Raised if mode is neither "save" nor "load"
+%   • STL file not found: Raised in load mode if stlFile does not exist
+%   • Unsupported stlread output: Raised if STL data format is unrecognized
+%
+% EXAMPLE:
+%   datasetScene(envObj, "save");   % Generate new scene files
+%   datasetScene(envObj, "load");   % Regenerate from existing STL
 function datasetScene(obj, mode)
-% datasetScene - prepare scene files (STL/PLY/XML) for ray tracing backends.
-% mode:
-%   "save" - build mesh from scatterTable and write STL/PLY/XML.
-%   "load" - read existing STL from stlFile and regenerate PLY/XML.
-
 if nargin < 2 || strlength(string(mode)) == 0
     mode = "save";
 end

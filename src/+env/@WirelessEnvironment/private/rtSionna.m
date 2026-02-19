@@ -1,7 +1,63 @@
+%% RT_SIONNA Ray tracing via Sionna RT adapter (Python)
+%
+% SYNTAX
+%   [P_dBm, state] = rtSionna(txPos, rxPos, spec, path)
+%   [P_dBm, state] = rtSionna(txPos, rxPos, spec, path, state)
+%
+% DESCRIPTION
+%   Performs ray tracing simulation using Sionna RT (a Python-based ray tracing
+%   engine with Mitsuba backend). This function acts as a MATLAB-Python adapter,
+%   handling environment setup, module loading, and coordinate transformation.
+%
+% INPUT ARGUMENTS
+%   txPos           [3 x NtxSamp] double
+%                   Transmitter position(s) in Cartesian coordinates [x; y; z]
+%
+%   rxPos           [3 x NrxSamp] double
+%                   Receiver position(s) in Cartesian coordinates [x; y; z]
+%
+%   spec            struct
+%                   Simulation specification containing:
+%                   - fc              Center frequency (Hz)
+%                   - Pt_dBm          Transmit power (dBm)
+%                   - maxRef          Maximum number of reflections (int)
+%                   - maxDif          Maximum number of diffractions (int)
+%                   - material        Material database name (string)
+%                   - cudaVisibleDevices  (optional) GPU device indices
+%
+%   path            struct
+%                   File paths and environment settings:
+%                   - sionnaModule    Path to Sionna adapter Python module
+%                   - xmlFile         Path to ray tracing scene XML file
+%                   - condaEnv        (optional) Conda environment directory
+%
+%   state           struct (default: empty)
+%                   Cached Python module handles:
+%                   - py_sionna       Loaded Sionna adapter module
+%                   - py_np           NumPy module reference
+%
+% OUTPUT ARGUMENTS
+%   P_dBm           [NrxSamp x NtxSamp] double
+%                   Received power matrix in dBm. Element (i,j) contains the
+%                   power received at receiver i from transmitter j.
+%
+%   state           struct
+%                   Updated state structure with cached Python objects for
+%                   efficient reuse across multiple function calls.
+%
+% NOTES
+%   - Coordinate transformation: MATLAB [3 x N] transposed to Python [N x 3]
+%   - Output shape normalized to [NrxSamp x NtxSamp] (transposed if needed)
+%   - CUDA device and Conda environment initialized on first call only
+%   - Python module cache persists for performance optimization
+%
+% EXAMPLE
+%   spec.fc = 3.5e9; spec.Pt_dBm = 20; spec.maxRef = 3; spec.maxDif = 2;
+%   [P_dBm, state] = rtSionna([0;0;5], [10;0;1.5], spec, path);
+%
+% SEE ALSO
+%   py.importlib, setenv
 function [P_dBm, state] = rtSionna(txPos, rxPos, spec, path, state)
-%RT_SIONNA Ray tracing via Sionna RT adapter (Python)
-% P_dBm: [NrxSamp x NtxSamp]
-
 arguments
     txPos (3,:) double
     rxPos (3,:) double
@@ -58,8 +114,8 @@ P_py = py_sigstrength( ...
 % ---- normalize shape to [NrxSamp x NtxSamp] double ----
 P_dBm = double(P_py);
 
-% 关键：你要在这里把形�?归一�?，不要把转置散落在主流程�?
-% 如果你的 python 端返回的�?[NtxSamp x NrxSamp]，就在这里转置：
+% 关键：你要在这里把形�?归一�?，不要把转置散落在主流程�?
+% 如果你的 python 端返回的�?[NtxSamp x NrxSamp]，就在这里转置：
 if size(P_dBm,1) == size(txPos,2) && size(P_dBm,2) == size(rxPos,2)
     P_dBm = P_dBm.';  % -> [NrxSamp x NtxSamp]
 end

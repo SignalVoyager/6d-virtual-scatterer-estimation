@@ -1,10 +1,32 @@
+% evaluate(obj, whichSet, viewMode, varargin)
+%
+% Visualize ray tracing outputs from the wireless environment simulation.
+%
+% ## Inputs
+%   obj       - WirelessEnvironment object containing raytracingResults
+%   whichSet  - string, "train" or "test" to select dataset
+%   viewMode  - string, visualization mode:
+%               * "txHeatmap" - RX power heatmap for a specific TX (requires orderTx in varargin)
+%               * "rxCount"   - Count of RX observations per grid cell
+%               * "txCount"   - Count of TX observations per grid cell
+%   varargin  - Optional arguments:
+%               * For "txHeatmap": orderTx (integer) - index of TX to visualize
+%
+% ## Output
+%   Displays figure with heatmap or count map, with scatterers overlaid.
+%
+% ## Error Cases
+%   - Throws error if raytracingResults is empty
+%   - Throws error if orderTx exceeds number of unique TX locations
+%   - Throws error if viewMode is not recognized
+%
+% ## Remarks
+%   - Grid positioning uses data from GridSpec and SceneSpec
+%   - Power values are converted to dBm for "txHeatmap" mode
+%   - TX location marked with pink star marker and label on heatmap
+%   - All scatterers drawn as rectangles with labels
+%   - Axes set to normal orientation with equal aspect ratio
 function evaluate(obj, whichSet, viewMode, varargin)
-% evaluate - visualize ray tracing outputs
-% whichSet: "train" or "test"
-% viewMode:
-%   "txHeatmap" -> heatmap for a specific TX index (requires orderTx)
-%   "rxCount"   -> count of RX observations per grid
-%   "txCount"   -> count of TX observations per grid
 if isempty(obj.raytracingResults)
     error('[WirelessEnvironment] No raytracingResults to plot.');
 end

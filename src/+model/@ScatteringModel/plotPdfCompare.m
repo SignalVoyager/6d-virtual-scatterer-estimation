@@ -1,6 +1,34 @@
+% plotPdfCompare - Compare probability density functions of ground-truth and predicted powers in dBm.
+%
+% SYNTAX:
+%   plotPdfCompare(obj, P, opt)
+%
+% DESCRIPTION:
+%   Compares the probability density functions (PDFs) of ground-truth and 
+%   predicted power measurements by computing normalized histograms. The histograms
+%   are binned according to a specified bin width and can be smoothed using a 
+%   moving average filter. A figure is generated displaying both PDFs overlaid 
+%   for visual comparison.
+%
+% INPUT ARGUMENTS:
+%   obj         - ScatteringModel object
+%   P           - Structure containing power measurements with fields:
+%                   .y_mW     - Ground-truth power in milliwatts [N x 1]
+%                   .yhat_mW  - Predicted power in milliwatts [N x 1]
+%                   .valid    - Logical indices of valid measurements [N x 1]
+%   opt         - (Optional) Options structure with fields:
+%                   .binWidth_dB - Histogram bin width in dB (default: 1.0)
+%                   .smoothWin   - Moving average window size (default: 3)
+%                                  Set to 1 to disable smoothing
+%
+% OUTPUT ARGUMENTS:
+%   (none) - Generates a figure with overlaid PDF plots
+%
+% NOTES:
+%   - Powers are converted to dB scale (dBm) before histogram computation
+%   - Only valid measurements (P.valid == true) are included in the analysis
+%   - Histogram normalization is set to 'pdf' for probability density comparison
 function plotPdfCompare(obj, P, opt) %#ok<INUSD>
-% plotPdfCompare - compare PDFs of ground-truth and predicted powers in dBm.
-% Histogram PDFs can be optionally smoothed by moving average.
 if nargin < 3 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"binWidth_dB"), opt.binWidth_dB = 1.0; end
 if ~isfield(opt,"smoothWin"),   opt.smoothWin = 3; end

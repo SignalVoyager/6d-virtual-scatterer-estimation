@@ -1,6 +1,41 @@
+%% PLOTRESIDUALMAP
+% Visualizes spatial prediction residuals for a scattering model across train+test samples.
+%
+% SYNTAX
+%   plotResidualMap(obj, txGrid)
+%   plotResidualMap(obj, txGrid, opt)
+%
+% DESCRIPTION
+%   Generates a scatter plot of prediction errors (predicted minus target power in dB)
+%   for all receiver locations associated with a specified transmitter grid point.
+%   The function computes residuals from combined train and test datasets, applies
+%   noise floor corrections, and highlights regions with large prediction errors.
+%
+% INPUTS
+%   obj         ScatteringModel object with raytracing results and prediction capability
+%   txGrid      [N x 2] array of transmitter grid coordinates [col, row] where
+%               col ranges in [1, Kx] and row ranges in [1, Ky]
+%
+% OPTIONAL PARAMETERS (opt structure)
+%   topPercentile   Percentile threshold for highlighting large-error points
+%                   Default: 95 (highlights top 5% of absolute residuals)
+%   q               Noise floor quantile for signal clipping
+%                   Default: 0.02
+%   eps_min         Minimum value to prevent log(0) in dB conversion
+%                   Default: 1e-12
+%
+% OUTPUT
+%   Figure with scatter plot showing:
+%   - Spatial distribution of receivers colored by residual magnitude
+%   - Transmitter location marked with pentagon
+%   - Scatterer rectangles with labels
+%   - Circles highlighting largest prediction errors
+%
+% NOTES
+%   - Warnings issued if no train/test samples exist for specified transmitter
+%   - Invalid values (NaN, Inf, negative) in predictions/targets are zeroed
+%   - Residual is defined as 10*log10(predicted/target) in dB
 function plotResidualMap(obj, txGrid, opt)
-% plotResidualMap - plot spatial residuals (prediction minus target in dB).
-% Uses train+test samples for the selected TX and highlights large errors.
 if nargin < 3 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"topPercentile"), opt.topPercentile = 95; end
 if ~isfield(opt,"q"), opt.q = 0.02; end

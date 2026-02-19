@@ -1,8 +1,32 @@
+% AGGREGATEGRIDSAMPLES Postprocess results based on transmitter and receiver indices.
+%
+%   RESULTS = AGGREGATEGRIDSAMPLES(RESULTS, OPT) performs postprocessing on a
+%   results matrix by filtering and deduplicating entries based on (tx, rx) pairs.
+%
+%   INPUT:
+%       RESULTS - M×N matrix of results where columns 1 and 2 contain transmitter
+%                 (tx) and receiver (rx) indices, respectively.
+%       OPT     - Structure with optional fields controlling filtering behavior:
+%           .allowSelf  - Logical; if false, removes entries where tx == rx
+%                         (default: true, allows self-pairs).
+%           .directed   - Logical; if false, treats (tx, rx) and (rx, tx) as
+%                         identical pairs and deduplicates accordingly
+%                         (default: true, treats as directed).
+%           .dedup      - Logical; if true, removes duplicate (tx, rx) key pairs
+%                         while preserving first occurrence order
+%                         (default: false, no deduplication).
+%
+%   OUTPUT:
+%       RESULTS - Filtered and deduplicated results matrix. Rows are removed
+%                 according to the postprocessing rules specified in OPT.
+%
+%   NOTES:
+%       - If RESULTS is empty, returns immediately without modification.
+%       - Deduplication uses 'stable' mode to maintain row order.
+%       - For undirected mode, the key is normalized to (min(tx,rx), max(tx,rx)).
+%
+%   See also: unique
 function Results = aggregateGridSamples(Results, opt)
-% Postprocess based on (tx,rx) indices only.
-% - directed: if false, convert to undirected key (min,max) before dedup (not used in your default).
-% - allowSelf: if false, remove tx==rx.
-% - dedup global: unique rows by key with 'stable'.
 if isempty(Results)
     return;
 end

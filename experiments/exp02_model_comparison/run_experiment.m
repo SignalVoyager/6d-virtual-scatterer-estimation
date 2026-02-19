@@ -29,16 +29,30 @@ preset = string(cfg.activeScenePreset);
 scene  = cfg.scenePresets.(preset);
 params.scatterTable = scene.scatterTable;
 
-% ---------- dataset: usually load in comparison ----------
-Nt_side = cfg.dataset.Nt_side;
-Nr_side = cfg.dataset.Nr_side;
-trainFile = fullfile(expRoot, cfg.dataset.trainFile);
-testFile  = fullfile(expRoot, cfg.dataset.testFile);
-
+% ---------- dataset build + selection ----------
 envObj = env.WirelessEnvironment(params);
-envObj.generateDataset(Nt_side, Nr_side, cfg.dataset.dataMode, cfg.dataset.sceneMode, trainFile, "isTrain", true);
-envObj.generateDataset(Nt_side, Nr_side, cfg.dataset.dataMode, cfg.dataset.sceneMode, testFile,  "isTrain", false);
-raytracingResults = envObj.raytracingResults;
+
+% Build all datasets from config.dataSetList
+dataSetList = cfg.dataSetList;
+dataSetCache = struct();
+for i = 1:numel(dataSetList)
+    ds = dataSetList(i);
+    dsName = char(string(ds.name));
+
+    [samplingMode, samplingArgs] = utils.parseSamplingSpec(ds);
+    dsPath = fullfile(expRoot, string(ds.path));
+
+    dataSetCache.(dsName) = envObj.generateDataset( ...
+        ds.Nt_side, ds.Nr_side, ...
+        ds.dataMode, ds.sceneMode, dsPath, ...
+        "samplingMode", samplingMode, ...
+        "samplingArgs", samplingArgs);
+end
+
+% Per-model dataset selection only.
+% Each model entry must define:
+%   cfg.models.<modelKey>.datasetSelection.trainSet
+%   cfg.models.<modelKey>.datasetSelection.testSet
 
 % ---------- evaluation opt ----------
 eopt = struct();
@@ -48,7 +62,7 @@ if isfield(cfg, "evaluation")
     if isfield(E,"doPdf"),      eopt.doPdf = E.doPdf; else, eopt.doPdf=false; end
     if isfield(E,"doCgm"),      eopt.doCgm = E.doCgm; else, eopt.doCgm=false; end
     if isfield(E,"doResidual"), eopt.doResidual = E.doResidual; else, eopt.doResidual=false; end
-    if isfield(E,"txGridList"), eopt.txGridList = cell2mat(E.txGridList); end
+    if isfield(E,"txGridList"), eopt.txGridList = E.txGridList; end
 else
     eopt.whichSet="test"; eopt.doPdf=false; eopt.doCgm=false; eopt.doResidual=false;
 end
@@ -65,24 +79,41 @@ for k = 1:numel(modelList)
     modelKey = modelList(k);
     mCfg = cfg.models.(modelKey);
 
+    sel = mCfg.datasetSelection;
+
+    trainKey = char(string(sel.trainSet));
+    testKey  = char(string(sel.testSet));
+
+    modelRaytracingResults = struct( ...
+        "trainSet", dataSetCache.(trainKey), ...
+        "testSet",  dataSetCache.(testKey));
+    envObj.raytracingResults = modelRaytracingResults;
+
     % response file per model
     params.responseFile = fullfile(expRoot, mCfg.responseFile);
 
-    fprintf("\n[COMPARISON] Running model: %s\n", modelKey);
+    fprintf("\n[COMPARISON] Running model: %s (train=%s, test=%s)\n", ...
+        modelKey, trainKey, testKey);
 
     % ---- instantiate model ----
     switch modelKey
         case "VirtualScatter6D"
             h = mCfg.hyper;
-            modelObj = model.VirtualScatter6D(params, "VirtualScatter6D", raytracingResults, ...
+            modelObj = model.VirtualScatter6D(params, "VirtualScatter6D", modelRaytracingResults, ...
                 "NumCenters",  h.NumCenters, ...
                 "PathLossExp", h.PathLossExp, ...
                 "RefDistance", h.RefDistance, ...
                 "EpsDist",     h.EpsDist, ...
                 "Solver",      h.Solver);
-
-        % case "BaselineA"
-        %     ... (your baseline constructor)
+        
+        case "VirtualScatter3D"
+            h = mCfg.hyper;
+            modelObj = model.VirtualScatter3D(params, "VirtualScatter3D", modelRaytracingResults, ...
+                "NumCenters",  h.NumCenters, ...
+                "PathLossExp", h.PathLossExp, ...
+                "RefDistance", h.RefDistance, ...
+                "EpsDist",     h.EpsDist, ...
+                "Solver",      h.Solver);
 
         otherwise
             warning("[COMPARISON] Unknown modelKey=%s. Skip.", modelKey);
@@ -103,11 +134,11 @@ for k = 1:numel(modelList)
     % ---- store a lightweight record (you can extend later) ----
     resultsSummary.models.(modelKey) = struct( ...
         "responseFile", string(mCfg.responseFile), ...
+        "trainSet", string(trainKey), ...
+        "testSet", string(testKey), ...
         "status", "done" ...
     );
 end
 
 save(fullfile(outDir, sprintf("comparison_summary_seed%d.mat", seed)), "resultsSummary");
 fprintf("[COMPARISON] Done. preset=%s, outputs=%s\n", preset, outDir);
-
-

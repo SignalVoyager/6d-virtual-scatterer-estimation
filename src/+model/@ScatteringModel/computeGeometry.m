@@ -1,3 +1,43 @@
+% COMPUTEGEOMETRY Computes geometric and line-of-sight information for scattering paths
+%
+% SYNTAX:
+%   [geomInfo, losInfo] = computeGeometry(obj, tx_idx, rx_idx)
+%
+% DESCRIPTION:
+%   Calculates 3D geometric parameters for all virtual scatterers relative to 
+%   transmitter (TX) and receiver (RX) positions, including distances, angles, 
+%   and visibility information. Also computes direct TX-RX line-of-sight path.
+%
+% INPUT ARGUMENTS:
+%   obj      - ScatteringModel object containing scene and grid specifications
+%   tx_idx   - Linear index of transmitter position in grid [scalar]
+%   rx_idx   - Linear index of receiver position in grid [scalar]
+%
+% OUTPUT ARGUMENTS:
+%   geomInfo - Structure array [N x 1] containing geometric info for each scatterer:
+%       .position      - Scatterer 3D position [x, y, z] [1 x 3]
+%       .dist_tx       - 3D distance from TX to scatterer [scalar]
+%       .dist_rx       - 3D distance from scatterer to RX [scalar]
+%       .visibility_tx - Visibility of TX->scatterer path [logical]
+%       .visibility_rx - Visibility of scatterer->RX path [logical]
+%       .omega_in      - Incident angle from TX to scatterer [rad, 0 to 2π]
+%       .omega_out     - Outgoing angle from scatterer to RX [rad, 0 to 2π]
+%
+%   losInfo - Structure containing direct TX-RX line-of-sight path information:
+%       .position_tx - Transmitter position [x, y, z] [1 x 3]
+%       .position_rx - Receiver position [x, y, z] [1 x 3]
+%       .dist        - 3D direct distance between TX and RX [scalar]
+%       .visibility  - LOS path visibility flag [logical]
+%       .omega       - TX to RX direction angle [rad, 0 to 2π]
+%
+% NOTES:
+%   - Scatterer positions are at the center of boxes defined in scatterTable
+%   - All angles are in radians, normalized to range [0, 2π]
+%   - Visibility computed using 3D segment-obstacle intersection
+%   - Grid is centered at origin with TX/RX at fixed height (tx_pos_z, rx_pos_z)
+%
+% SEE ALSO:
+%   segmentVisibility3D, ind2sub, atan2
 function [geomInfo, losInfo] = computeGeometry(obj, tx_idx, rx_idx)
 % load scene
 scatterTable = obj.SceneSpec.scatterTable;

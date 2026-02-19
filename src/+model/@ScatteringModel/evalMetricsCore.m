@@ -1,6 +1,34 @@
+% evalMetricsCore - Compute core regression metrics on linear-scale power.
+%
+% SYNTAX:
+%   M = evalMetricsCore(obj, P)
+%
+% DESCRIPTION:
+%   Evaluates comprehensive regression performance metrics in linear power scale.
+%   Computes error statistics, correlations, relative RMSE, and linear calibration
+%   parameters comparing predicted and observed power values.
+%
+% INPUT:
+%   obj       ScatteringModel object (unused)
+%   P         struct containing:
+%     .y_mW     - observed power values in mW (N x 1)
+%     .yhat_mW  - predicted power values in mW (N x 1)
+%
+% OUTPUT:
+%   M         struct with computed metrics:
+%     .mse        - mean squared error on linear scale (mW²)
+%     .nmse       - normalized mean squared error, normalized by mean(y_mW²)
+%     .glo_mse_dB - global mean squared error in dB scale
+%     .rho_y_yhat - Pearson correlation coefficient between y and yhat
+%     .rho_y_res  - Pearson correlation coefficient between y and residuals
+%     .relRMSE    - relative RMSE normalized by RMS of observations
+%     .ab         - linear calibration coefficients [a; b] for y ≈ a*yhat + b
+%
+% NOTES:
+%   - Correlations return NaN if either signal has zero standard deviation
+%   - dB scale metrics use max(·, 1e-12) floor to avoid log(0)
+%   - Linear fit solves least-squares: yhat_mW \ y_mW
 function M = evalMetricsCore(obj, P) %#ok<INUSD>
-% evalMetricsCore - compute core regression metrics on linear-scale power.
-% Returns global error, correlations, relative RMSE, and linear calibration fit.
 y_mW    = P.y_mW;
 yhat_mW = P.yhat_mW;
 res_mW  = y_mW - yhat_mW;

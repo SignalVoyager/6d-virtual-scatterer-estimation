@@ -1,7 +1,25 @@
-% =========== helper: write ASCII PLY ===========
+%GEOMMAKECUBOID Create a cuboid geometry from scatterer parameters
+%
+%   [F,V] = GEOMMAKECUBOID(scatterTable) creates triangular facets and
+%   vertices that define a cuboid (rectangular box) geometry.
+%
+%   Input:
+%       scatterTable - [1x6] array containing cuboid parameters:
+%           scatterTable(1:3) - [x0, y0, z0] origin position
+%           scatterTable(4:6) - [w, d, h] width, depth, and height
+%
+%   Output:
+%       V - [8x3] matrix of vertex coordinates defining the cuboid corners
+%       F - [12x3] matrix of triangular face indices (2 triangles per face,
+%           6 faces total)
+%
+%   Notes:
+%       - The cuboid is axis-aligned with edges parallel to x, y, z axes
+%       - Vertices are ordered: bottom face (1-4), then top face (5-8)
+%       - Each face is represented by 2 triangles for surface definition
+%
+%   See also: triangulation, trisurf
 function [F,V] = geomMakeCuboid(scatterTable)
-% geomMakeCuboid - convert one [x y z w d h] box row to mesh faces/vertices.
-% Outputs triangular faces F and vertex coordinates V.
 x0 = scatterTable(1); y0 = scatterTable(2); z0 = scatterTable(3);
 w  = scatterTable(4); d  = scatterTable(5); h  = scatterTable(6); 
 x1 = x0 + w; y1 = y0 + d; z1 = z0+h;

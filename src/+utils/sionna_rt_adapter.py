@@ -1,161 +1,31 @@
-# # pycode/sionna_rt_adapter.py
-# import numpy as np
-# 
-# from sionna.rt import load_scene, Transmitter, Receiver, PlanarArray, RadioMapSolver
-# 
-# _SCENE_CACHE = {}
-# 
-# # ---------------------------
-# # Hyper-parameters (tune here)
-# # ---------------------------
-# RM_CELL_SIZE_M = 0.25       # 覆盖图网格分辨率（越小越慢、越细）
-# RM_MARGIN_M   = 1.0         # 覆盖图在(rx bbox)基础上的外扩边界
-# RM_SAMPLES_PER_TX = 2_000_000  # 每个TX的蒙特卡洛采样数（越大越稳但越慢）先 5e5-2e6
-# RM_SEED = 2
-# 
-# # 你可以固定传播机制（更接近"确定性"）
-# RM_LOS = True
-# RM_SPECULAR = True
-# RM_REFRACTION = False
-# RM_DIFFUSE = False
-# RM_EDGE_DIFFRACTION = False
-# RM_DIFFRACTION_LIT_REGION = True
-# 
-# def _scene_key(scene_path, freq_hz):
-#     return (str(scene_path), float(freq_hz))
-# 
-# def _to_N3(x):
-#     """Accept (N,3) or (3,N)"""
-#     a = np.asarray(x, dtype=np.float32)
-#     if a.ndim != 2:
-#         raise ValueError(f"pos array must be 2D, got shape {a.shape}")
-#     if a.shape[1] == 3:
-#         return a
-#     if a.shape[0] == 3:
-#         return a.T
-#     raise ValueError(f"pos array must be (N,3) or (3,N), got shape {a.shape}")
-# 
-# def get_scene(scene_path, freq_hz):
-#     key = _scene_key(scene_path, freq_hz)
-#     if key in _SCENE_CACHE:
-#         return _SCENE_CACHE[key]
-# 
-#     scene = load_scene(scene_path)
-#     scene.frequency = float(freq_hz)  # Scene.frequency exists in Sionna RT
-#     _SCENE_CACHE[key] = scene
-#     return scene
-# 
-# def _apply_radio_material(scene, material_tag):
-#     # 你之前提到自定义材质/版本坑，这里只做"radio_material 绑定"的最小实现：
-#     # 若 material_tag 不存在则忽略
-#     try:
-#         rm = scene.radio_materials[material_tag]
-#     except Exception:
-#         return
-#     # 给所有 scene objects 绑同一 radio material（可按需更精细）
-#     for _, obj in scene.objects.items():
-#         try:
-#             obj.radio_material = rm
-#         except Exception:
-#             pass
-# 
-# def sigstrength(scene_path,
-#                 tx_pos_xyz,
-#                 rx_pos_xyz,
-#                 freq_hz,
-#                 tx_power_dbm,
-#                 max_depth=5,
-#                 max_diff=2,
-#                 material_tag="concrete"):
-#     """
-#     Return P_dBm with shape [Nrx, Ntx]
-#     """
-#     tx_pos = _to_N3(tx_pos_xyz)
-#     rx_pos = _to_N3(rx_pos_xyz)
-# 
-#     scene = get_scene(scene_path, freq_hz)
-# 
-#     # 清空旧的 Tx/Rx
-#     for name in list(scene.transmitters.keys()):
-#         scene.remove(name)
-#     for name in list(scene.receivers.keys()):
-#         scene.remove(name)
-# 
-#     # 天线阵列：保持最简单的单天线各向同性（否则 all_set(radio_map=True) 会要求阵列）
-#     scene.tx_array = PlanarArray(num_rows=1, num_cols=1,
-#                                  vertical_spacing=0.5, horizontal_spacing=0.5,
-#                                  pattern="iso", polarization="V")
-#     scene.rx_array = PlanarArray(num_rows=1, num_cols=1,
-#                                  vertical_spacing=0.5, horizontal_spacing=0.5,
-#                                  pattern="iso", polarization="V")
-# 
-#     _apply_radio_material(scene, str(material_tag))
-# 
-#     # 添加 Tx
-#     for i, p in enumerate(tx_pos):
-#         tx = Transmitter(name=f"tx{i}", position=p, orientation=[0,0,0])
-#         tx.power_dbm = float(tx_power_dbm)
-#         scene.add(tx)
-# 
-#     # 添加 Rx（用来获取 rm.rx_cell_indices 对应每个rx落在哪个cell）
-#     for j, p in enumerate(rx_pos):
-#         rx = Receiver(name=f"rx{j}", position=p, orientation=[0,0,0])
-#         scene.add(rx)
-# 
-#     # ------- Radio map plane (只覆盖 rx 的 bbox，避免整场景大地图) -------
-#     x_min, y_min = float(np.min(rx_pos[:,0])), float(np.min(rx_pos[:,1]))
-#     x_max, y_max = float(np.max(rx_pos[:,0])), float(np.max(rx_pos[:,1]))
-#     cx = 0.5*(x_min + x_max)
-#     cy = 0.5*(y_min + y_max)
-#     cz = float(np.mean(rx_pos[:,2]))  # 覆盖图平面高度（默认按rx高度）
-#     sx = (x_max - x_min) + 2.0*RM_MARGIN_M
-#     sy = (y_max - y_min) + 2.0*RM_MARGIN_M
-#     sx = max(sx, RM_CELL_SIZE_M)
-#     sy = max(sy, RM_CELL_SIZE_M)
-# 
-#     solver = RadioMapSolver()
-#     rm = solver(
-#         scene,
-#         center=[cx, cy, cz],
-#         orientation=[0.0, 0.0, 0.0],
-#         size=[sx, sy],
-#         cell_size=[RM_CELL_SIZE_M, RM_CELL_SIZE_M],
-#         samples_per_tx=int(RM_SAMPLES_PER_TX),
-#         max_depth=int(max_depth),
-#         los=bool(RM_LOS),
-#         specular_reflection=bool(RM_SPECULAR),
-#         diffuse_reflection=bool(RM_DIFFUSE),
-#         refraction=bool(RM_REFRACTION),
-#         diffraction=bool(int(max_diff) > 0),
-#         edge_diffraction=bool(RM_EDGE_DIFFRACTION),
-#         diffraction_lit_region=bool(RM_DIFFRACTION_LIT_REGION),
-#         seed=int(RM_SEED),
-#     )
-#     # RadioMap.rss 是 W；rss = path_gain * tx_power(W) :contentReference[oaicite:1]{index=1}
-# 
-#     # 取每个 rx 所在 cell 的 rss 值（对每个 tx）
-#     # --- NumPy view once ---
-#     rss_np = np.array(rm.rss.numpy(), dtype=np.float64)   # [Ntx, Ny, Nx]
-# 
-#     idx = rm.rx_cell_indices                              # (col,row)
-#     col = np.array(idx.x, dtype=np.int64)
-#     row = np.array(idx.y, dtype=np.int64)
-# 
-#     # (optional) clip for safety during debug
-#     Ny, Nx = int(rss_np.shape[1]), int(rss_np.shape[2])
-#     col_c = np.clip(col, 0, Nx-1)
-#     row_c = np.clip(row, 0, Ny-1)
-# 
-#     # Correct sampling: rss[:, row, col] -> [Ntx, Nrx]
-#     rss_k = rss_np[:, row_c, col_c]
-# 
-#     p_dbm = 10.0*np.log10(np.maximum(rss_k, 1e-30)) + 30.0
-#     return p_dbm.T.astype(np.float64)    # -> [Nrx, Ntx]
-
-# sionna_rt_adapter.py
 import os
+"""
+Sionna Ray Tracing Adapter Module
+This module provides a high-level interface to Sionna's ray tracing engine for computing
+signal strength in wireless propagation scenarios. It wraps Sionna's PathSolver with
+scene caching and simplified APIs similar to MATLAB's sigstrength function.
+Configuration:
+    ENABLE_SCATTERING (bool): Enable diffuse scattering in ray tracing. When False,
+        only mirror-like reflections are computed.
+    ENABLE_REFRACTION (bool): Enable refraction effects in ray tracing.
+    ENABLE_EDGE_DIFFRACTION (bool): Enable edge diffraction effects.
+    SYNTHETIC_ARRAY (bool): Use synthetic array processing for beamforming.
+    SEED (int): Random seed for reproducibility in stochastic computations.
+Functions:
+    get_scene(scene_path, freq_hz, max_depth, max_diff, material_tag):
+        Load or retrieve cached scene with configured transmitter/receiver arrays.
+    sigstrength(scene_path, tx_pos_xyz, rx_pos_xyz, freq_hz, tx_power_dbm, 
+                max_depth, max_diff, material_tag):
+        Compute received signal strength (dBm) between transmitters and receivers
+        using ray tracing with configurable propagation mechanisms.
+    gpu_report():
+        Query and return NVIDIA GPU information via nvidia-smi.
+Dependencies:
+    - mitsuba: Ray tracing engine (CUDA variant)
+    - sionna: Wireless ray tracing library
+    - numpy: Numerical computations
+"""
 
-# （可选）打印/确认：MATLAB 侧设置的 CUDA_VISIBLE_DEVICES 是否生效
 print("CUDA_VISIBLE_DEVICES =", os.environ.get("CUDA_VISIBLE_DEVICES", ""))
 
 import mitsuba as mi

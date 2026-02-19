@@ -1,5 +1,30 @@
+%GEOMWRITEPLYASCII Write a 3D mesh to a PLY file in ASCII format.
+%
+%   GEOMWRITEPLYASCII(FILENAME, V, F) writes a mesh defined by vertices and
+%   faces to a PLY (Polygon File Format) file in ASCII format.
+%
+%   Input Arguments:
+%       FILENAME    - char or string: path to the output PLY file
+%       V           - Nv x 3 numeric array: vertex coordinates, where each row
+%                     contains [x, y, z] coordinates of a vertex
+%       F           - Nf x 3 numeric array: face indices (1-based), where each
+%                     row contains three vertex indices that form a triangle
+%
+%   Remarks:
+%       - The function converts MATLAB's 1-based indexing to PLY's 0-based
+%         indexing automatically
+%       - Vertices are written with 9 significant digits precision
+%       - Only supports triangular meshes (3 vertices per face)
+%       - An error is raised if the file cannot be opened for writing
+%
+%   Example:
+%       V = [0 0 0; 1 0 0; 0 1 0];
+%       F = [1 2 3];
+%       geomWritePlyAscii('mesh.ply', V, F);
+%
+%   See Also:
+%       fopen, fprintf, fclose
 function geomWritePlyAscii(filename, V, F)
-% V: [Nv x 3], F: [Nf x 3] 1-based indices
 fid = fopen(filename, "w");
 assert(fid>0, "Cannot open PLY file for writing: %s", filename);
 
