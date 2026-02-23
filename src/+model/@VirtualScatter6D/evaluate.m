@@ -1,7 +1,7 @@
 % EVALUATE - Example evaluation pipeline (calls all reusable blocks)
 %
 % SYNTAX:
-%   evaluate(obj, opt)
+%   evaluate(obj, opt, savePath)
 %
 % DESCRIPTION:
 %   This implementation is intentionally "full": it calls all base blocks and
@@ -10,6 +10,8 @@
 % INPUTS:
 %   obj     - VirtualScatter6D object instance
 %   opt     - (optional) struct with configuration options
+%   savePath - output file path prefix (without extension). If empty,
+%              figures are not saved.
 %
 % OPTIONS:
 %   whichSet       - Dataset to evaluate on (default: "test")
@@ -40,10 +42,12 @@
 % ERRORS:
 %   Throws error if scatterInfo is empty
 %   Throws error if txGridList is not properly formatted
-function evaluate(obj, opt)
+function evaluate(obj, opt, savePath)
 if nargin < 2 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"whichSet"),      opt.whichSet = "test"; end
 if ~isfield(opt,"txGridList"),    opt.txGridList = [30 30]; end
+if ~isfield(opt,"cgmSliceMode"),  opt.cgmSliceMode = "fixTx"; end
+if ~isfield(opt,"cgmGridList"),   opt.cgmGridList = opt.txGridList; end
 if ~isfield(opt,"doPdf"),         opt.doPdf = true; end
 if ~isfield(opt,"doCgm"),         opt.doCgm = true; end
 if ~isfield(opt,"doResidual"),    opt.doResidual = true; end
@@ -60,6 +64,7 @@ if isempty(obj.scatterInfo)
     error('[VirtualScatter6D.evaluate] scatterInfo is empty. Call train() first.');
 end
 fprintf('\n[VirtualScatter6D.evaluate] Evaluating ...\n');
+figsBefore = findall(0, 'Type', 'figure');
 
 % ----- 1) standardized prediction pack -----
 P = obj.evalPrepare(opt.whichSet, opt);
@@ -77,19 +82,40 @@ if opt.doPdf
 end
 
 % ----- 5) spatial diagnostics -----
-txList = opt.txGridList;
-if isempty(txList), return; end
-if size(txList,2) ~= 2
-    error('opt.txGridList must be [N x 2] as [col,row].');
+if size(opt.cgmGridList,2) ~= 2
+    error('opt.cgmGridList must be [N x 2] as [col,row].');
 end
 
-for i = 1:size(txList,1)
-    txGrid = txList(i,:);
-    if opt.doCgm
-        obj.plotCgmMap(txGrid, opt);
+if opt.doCgm
+    for i = 1:size(opt.cgmGridList,1)
+        obj.plotCgmSlice(char(string(opt.cgmSliceMode)), opt.cgmGridList(i,:));
     end
-    if opt.doResidual
-        obj.plotResidualMap(txGrid, opt);
+end
+
+if opt.doResidual
+    for i = 1:size(opt.cgmGridList,1)
+        obj.plotResidualMap(opt.cgmGridList(i,:), opt);
+    end
+end
+
+if strlength(string(savePath)) > 0
+    savePathStr = char(string(savePath));
+    [saveDir, ~, ~] = fileparts(savePathStr);
+    if ~isempty(saveDir) && ~isfolder(saveDir)
+        mkdir(saveDir);
+    end
+
+    figsAfter = findall(0, 'Type', 'figure');
+    figs = setdiff(figsAfter, figsBefore);
+    if ~isempty(figs)
+        figNums = arrayfun(@(h) h.Number, figs);
+        [~, idxOrder] = sort(figNums);
+        figs = figs(idxOrder);
+    end
+    for i = 1:numel(figs)
+        baseName = sprintf('%s_%02d', savePathStr, i);
+        saveas(figs(i), string(baseName) + ".png");
+        savefig(figs(i), string(baseName) + ".fig");
     end
 end
 end

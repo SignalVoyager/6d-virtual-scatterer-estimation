@@ -1,4 +1,4 @@
-﻿% run_experiment.m (SHOWCASE)
+% run_experiment.m (SHOWCASE)
 % Inputs injected by main_all_experiments.m:
 %   expRoot, seed
 
@@ -12,10 +12,6 @@ cfg = jsondecode(fileread(fullfile(expRoot, "config.json")));
 % ---------- build params (strictly inside this experiment) ----------
 params = struct();
 
-params.stlFile      = fullfile(dataDir, "scene.stl");
-params.plyFile      = fullfile(dataDir, "scene.ply");
-params.xmlFile  = fullfile(dataDir, "scene.xml");
-
 params.condaEnv = string(cfg.backend.condaEnv);
 params.sionnaModule = fullfile(expRoot, string(cfg.backend.sionnaModule));
 
@@ -27,14 +23,17 @@ params.gridSize = cfg.grid.gridSize;
 params.tx_pos_z = cfg.grid.tx_pos_z;
 params.rx_pos_z = cfg.grid.rx_pos_z;
 
-preset = string(cfg.scenes.activeScenePreset);
-scene  = cfg.scenes.(preset);
-params.scatterTable = scene.scatterTable;
-sceneModeCfg = string(scene.sceneMode);
-
-% model response file inside experiment
 modelKey = string(cfg.models.activeModel);        % "VirtualScatter6D"
 mCfg = cfg.models.(modelKey);
+preset = string(mCfg.activeScenePreset);
+scene  = cfg.scenes.(preset);
+sceneBaseName = "scene_" + preset;
+params.stlFile = fullfile(dataDir, sceneBaseName + ".stl");
+params.plyFile = fullfile(dataDir, sceneBaseName + ".ply");
+params.xmlFile = fullfile(dataDir, sceneBaseName + ".xml");
+params.scatterTable = scene.scatterTable;
+
+% model response file inside experiment
 params.responseFile = fullfile(expRoot, mCfg.responseFile);
 
 % ---------- Step 1) Environment + dataset ----------
@@ -52,7 +51,7 @@ for i = 1:numel(dataSetList)
 
     dataSetCache.(dsName) = envObj.generateDataset( ...
         ds.Nt_side, ds.Nr_side, ...
-        ds.dataMode, sceneModeCfg, dsPath, ...
+        ds.dataMode, "save", dsPath, ...
         "samplingMode", samplingMode, ...
         "samplingArgs", samplingArgs);
 end
@@ -67,24 +66,22 @@ testSet  = dataSetCache.(testKey);
 raytracingResults = struct("trainSet", trainSet, "testSet", testSet);
 envObj.raytracingResults = raytracingResults;
 
-% Track figure handles created during this script run only
-figsBefore = findall(0, 'Type', 'figure');
-
 % ---------- Step 2) Environment plots (save to outputs) ----------
 try
-    orders = cfg.plots.envTxHeatmapOrders;
+    EP = cfg.envEvaluation;
+    orders = EP.txHeatmapOrders;
     for k = 1:numel(orders)
-        envObj.evaluate("test", "txHeatmap", orders(k));
-        saveas(gcf, fullfile(outDir, sprintf("env_test_txHeatmap_order%d_seed%d.png", orders(k), seed)));
+        savePath = fullfile(outDir, sprintf("env_test_txHeatmap_order%d_seed%d", orders(k), seed));
+        envObj.evaluate("test", "txHeatmap", savePath, orders(k));
     end
 
-    if isfield(cfg.plots, "doRxCount") && cfg.plots.doRxCount
-        envObj.evaluate("train", "rxCount");
-        saveas(gcf, fullfile(outDir, sprintf("env_train_rxCount_seed%d.png", seed)));
+    if EP.enableRxCount
+        savePath = fullfile(outDir, sprintf("env_train_rxCount_seed%d", seed));
+        envObj.evaluate("train", "rxCount", savePath);
     end
-    if isfield(cfg.plots, "doTxCount") && cfg.plots.doTxCount
-        envObj.evaluate("train", "txCount");
-        saveas(gcf, fullfile(outDir, sprintf("env_train_txCount_seed%d.png", seed)));
+    if EP.enableTxCount
+        savePath = fullfile(outDir, sprintf("env_train_txCount_seed%d", seed));
+        envObj.evaluate("train", "txCount", savePath);
     end
 catch ME
     warning(ME.identifier, '[SHOWCASE] env plots failed: %s', ME.message);
@@ -106,36 +103,18 @@ end
 
 modelObj.train("mode","save");
 
-% ---------- Step 4) evaluation options (aligned with exp02 schema) ----------
+% ---------- Step 4) evaluation options ----------
+E = cfg.modelEvaluation;
 eopt = struct();
-if isfield(cfg, "evaluation")
-    E = cfg.evaluation;
-    if isfield(E, "whichSet"),   eopt.whichSet = string(E.whichSet); else, eopt.whichSet = "test"; end
-    if isfield(E, "doPdf"),      eopt.doPdf = E.doPdf; else, eopt.doPdf = true; end
-    if isfield(E, "doCgm"),      eopt.doCgm = E.doCgm; else, eopt.doCgm = true; end
-    if isfield(E, "doResidual"), eopt.doResidual = E.doResidual; else, eopt.doResidual = true; end
-    if isfield(E, "txGridList")
-        eopt.txGridList = E.txGridList;
-    elseif isfield(cfg, "plots") && isfield(cfg.plots, "diagTxGridList")
-        eopt.txGridList = cfg.plots.diagTxGridList; % backward compatibility
-    end
-else
-    eopt.whichSet = "test"; eopt.doPdf = true; eopt.doCgm = true; eopt.doResidual = true;
-    if isfield(cfg, "plots") && isfield(cfg.plots, "diagTxGridList")
-        eopt.txGridList = cfg.plots.diagTxGridList; % backward compatibility
-    end
-end
+eopt.whichSet = string(E.whichSet);
+eopt.cgmSliceMode = string(E.cgmSliceMode);
+eopt.cgmGridList = E.cgmGridList;
+eopt.doPdf = E.enablePdf;
+eopt.doCgm = E.enableCgm;
+eopt.doResidual = E.enableResidual;
 
-modelObj.evaluate(eopt);
-
-% ---------- Save figures created by this script run only ----------
-if isfield(cfg.plots, "saveFigures") && cfg.plots.saveFigures
-    figsAfter = findall(0, 'Type', 'figure');
-    figs = setdiff(figsAfter, figsBefore);
-    for i = 1:numel(figs)
-        saveas(figs(i), fullfile(outDir, sprintf("showcase_fig_%02d_seed%d.png", i, seed)));
-    end
-end
+evalSavePath = fullfile(outDir, sprintf("%s_seed%d", char(modelKey), seed));
+modelObj.evaluate(eopt, evalSavePath);
 
 fprintf("[SHOWCASE] Done. preset=%s, outputs=%s\n", preset, outDir);
 

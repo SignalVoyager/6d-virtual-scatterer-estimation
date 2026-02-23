@@ -46,8 +46,8 @@ function main_all_experiments()
     addpath(genpath(fullfile(projectRoot, "src")));
 
     % ---------- choose experiments ----------
-    expNames = ["exp02_model_comparison"]; % cell array of experiment folder names under project/experiments/
-    % expNames = ["exp01_virtualscatter6d_showcase"];
+    % expNames = ["exp02_model_comparison"]; % cell array of experiment folder names under project/experiments/
+    expNames = ["exp01_virtualscatter6d_showcase"];
 
     % ---------- choose RNG seeds ----------
     rngValues = [421];  % can be vector

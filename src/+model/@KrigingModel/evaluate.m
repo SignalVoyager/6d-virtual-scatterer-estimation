@@ -1,6 +1,10 @@
-function evaluate(obj, opt)
+function evaluate(obj, opt, savePath)
 % evaluate - model-specific evaluation pipeline
 % Uses ScatteringModel's protected helper methods.
+% savePath is accepted for interface consistency and currently unused.
+if nargin < 3 %#ok<INUSD>
+    savePath = "";
+end
 
 if nargin < 2 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"whichSet"),   opt.whichSet = "test"; end

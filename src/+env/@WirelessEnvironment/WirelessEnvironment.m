@@ -114,11 +114,11 @@ classdef WirelessEnvironment < handle
         %   Returns one dataset matrix [N x 3] and does not split train/test internally.
         Results = generateDataset(obj, Nt_side, Nr_side, dataMode, sceneMode, filePath, varargin)
 
-        % evaluate(obj, whichSet, viewMode, varargin)
+        % evaluate(obj, whichSet, viewMode, savePath, varargin)
         %   whichSet: "train" | "test"
         %   viewMode: "txHeatmap" | "rxCount" | "txCount"
+        %   savePath: output file base path; empty string means no file output
         %   varargin: for "txHeatmap", provide orderTx (index into unique tx list)
-        evaluate(obj, whichSet, viewMode, varargin)
+        evaluate(obj, whichSet, viewMode, savePath, varargin)
     end
 end
-

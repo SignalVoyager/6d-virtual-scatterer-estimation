@@ -19,7 +19,7 @@ classdef (Abstract) ScatteringModel < handle
 %
 %   % 3) Run model-specific evaluation (pipeline is decided by the subclass)
 %   opt = struct("whichSet","test", "txGridList",[30 30], "doPdf",true);
-%   model.evaluate(opt);
+%   model.evaluate(opt, fullfile("outputs","MyModel_seed421"));
 %
 % Data convention (important):
 %   - tx_idx/rx_idx are linear indices over the 2D grid [Ky,Kx] (MATLAB sub2ind).
@@ -121,11 +121,14 @@ classdef (Abstract) ScatteringModel < handle
         %   and update obj.scatterInfo (and any subclass-specific state).
         train(obj)
 
-        % evaluate(obj, opt)
+        % evaluate(obj, opt, savePath)
         %   Model-specific evaluation pipeline. Subclasses decide:
         %     - which metrics to report
         %     - which plots to generate
         %     - which TXs to diagnose, etc.
+        %
+        % savePath:
+        %   output file prefix (without extension). Empty means no figure output.
         %
         % opt fields (optional):
         %   whichSet   : "test"|"train"|"all"  (default "test")
@@ -137,7 +140,7 @@ classdef (Abstract) ScatteringModel < handle
         % Recommended behavior:
         %   - Call evalPrepare() first to standardize prediction + noise-floor handling.
         %   - Use evalMetricsCore()/evalMetricsBuckets()/evalReport() as reusable blocks.
-        evaluate(obj, opt)
+        evaluate(obj, opt, savePath)
                       
         % [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR)
         %   Predict channel gain for a batch of TX/RX grid pairs.
@@ -238,17 +241,21 @@ classdef (Abstract) ScatteringModel < handle
         %   smoothWin   : moving-average window (default 3; 1 disables smoothing)
         plotPdfCompare(obj, P, opt)
 
-        % plotCgmMap(obj, txGrid, opt)
-        %   Visualize predicted CGM (RX power heatmap) for a given TX grid.
+        % plotCgmSlice(obj, mode, gridPos)
+        %   Visualizes a 2D slice of the 6D CKM by fixing either
+        %   Tx or Rx position and sweeping the other across the grid.
         %
-        % Inputs:
-        %   txGrid: [1 x 2] [col,row] in grid coordinates (1-based)
+        % Input Arguments:
+        %   obj      - 6D CKM model object
+        %   mode     - 'fixTx' or 'fixRx'
+        %   gridPos  - [col, row] grid index to fix
         %
         % Notes:
-        %   - It should exclude invalid grids inside/near scatterers using
-        %     the mask produced by getPlotContext().
-        %   - Units displayed in dBm (10log10(mW)).
-        plotCgmMap(obj, txGrid, opt)
+        %   - Invalid grids excluded
+        %   - Power displayed in dBm
+        %   - Scatterers overlaid
+        %   - Color scale clipped to [1%, 99%]
+        plotCgmSlice(obj, mode, gridPos)
 
         % plotResidualMap(obj, txGrid, opt)
         %   Visualize residuals (in dB) for all measured RX locations under a

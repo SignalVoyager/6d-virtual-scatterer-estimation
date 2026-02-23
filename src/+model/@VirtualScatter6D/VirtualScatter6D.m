@@ -64,9 +64,9 @@ classdef VirtualScatter6D < model.ScatteringModel
         %   Linear power prediction in mW.
         [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR) 
 
-        % evaluate(obj, opt)
-        %   Example evaluation pipeline calling base metrics and optional plots.
-        evaluate(obj, opt)
+        % evaluate(obj, opt, savePath)
+        %   savePath is output file prefix. Empty means no figure output.
+        evaluate(obj, opt, savePath)
     end
 
     methods (Access = private)

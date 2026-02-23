@@ -85,19 +85,19 @@ axis equal;
 xlim([xCenters(1)-gridSize/2, xCenters(end)+gridSize/2]);
 ylim([yCenters(1)-gridSize/2, yCenters(end)+gridSize/2]);
 colorbar;
-title(sprintf('10log10(hhat/h) (dB), TX=%d (train+test)', txGridIdx));
-xlabel('x (m)'); ylabel('y (m)');
+title(sprintf('10log10(hhat/h) (dB), TX=%d (train+test)', txGridIdx), 'Interpreter', 'latex');
+xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
 
 % mark TX
 [ty, tx] = ind2sub([Ky, Kx], txGridIdx);
 tx_pos = [xCenters(tx), yCenters(ty)];
 plot(tx_pos(1), tx_pos(2), 'p', 'MarkerSize', 14, 'LineWidth', 2);
-text(tx_pos(1), tx_pos(2), '  TX', 'FontWeight', 'bold', 'VerticalAlignment','middle');
+text(tx_pos(1), tx_pos(2), '  TX', 'FontWeight', 'bold', 'VerticalAlignment','middle', 'Interpreter', 'latex');
 
 % draw scatterers
 for n = 1:size(scatterTable,1)
     rectangle('Position', [scatterTable(n,1), scatterTable(n,2), scatterTable(n,4), scatterTable(n,5)], 'LineWidth', 1.2);
-    text(scatterTable(n,1), scatterTable(n,2), sprintf(' S%d', n), 'FontWeight','bold', 'VerticalAlignment','bottom');
+    text(scatterTable(n,1), scatterTable(n,2), sprintf(' S%d', n), 'FontWeight','bold', 'VerticalAlignment','bottom', 'Interpreter', 'latex');
 end
 
 % highlight large-error points (top percentile)

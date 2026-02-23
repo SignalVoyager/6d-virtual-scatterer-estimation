@@ -17,7 +17,8 @@ classdef VirtualScatter3D < model.ScatteringModel
 %   mdl = model.VirtualScatter3D(params, "VirtualScatter3D", raytracingResults, ...
 %           "NumCenters", 8, "Solver","NNLS");
 %   mdl.train("mode","save");
-%   mdl.evaluate(struct("txGridList",[30 30; 10 10]));
+%   mdl.evaluate(struct("txGridList",[30 30; 10 10]), ...
+%                fullfile("outputs","VirtualScatter3D_seed421"));
 
     properties
         % -------- Model hyperparameters --------
@@ -74,9 +75,9 @@ classdef VirtualScatter3D < model.ScatteringModel
         [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR)
 
 
-        % evaluate(obj, opt)
-        %   Example evaluation pipeline calling base metrics and optional plots.
-        evaluate(obj, opt)
+        % evaluate(obj, opt, savePath)
+        %   savePath is output file prefix. Empty means no figure output.
+        evaluate(obj, opt, savePath)
     end
 
     methods (Access = private)

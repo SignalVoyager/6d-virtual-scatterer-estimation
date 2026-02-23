@@ -55,8 +55,8 @@ figure;
 plot(centers, y_pdf,    'LineWidth', 1.8); hold on;
 plot(centers, yhat_pdf, 'LineWidth', 1.8);
 grid on;
-xlabel('Power (dBm)');
-ylabel('PDF');
-title('PDF comparison: Ground truth y vs Prediction yhat');
-legend('y (GT)', 'yhat', 'Location', 'best');
+xlabel('Power (dBm)', 'Interpreter', 'latex');
+ylabel('PDF', 'Interpreter', 'latex');
+title('PDF comparison: Ground truth y vs Prediction yhat', 'Interpreter', 'latex');
+legend('y (GT)', 'yhat', 'Location', 'best', 'Interpreter', 'latex');
 end

@@ -18,7 +18,6 @@
     "rx_pos_z": 0.5
   },
   "scenes": {
-    "activeScenePreset": "sparse",
     "dense": {
       "name": "dense",
       "scatterTable": [
@@ -40,7 +39,6 @@
         [-35.0, -125.0, 0.0, 34.0, 14.0, 13.0],
         [70.0, -130.0, 0.0, 38.0, 15.0, 14.0]
       ],
-      "sceneMode": "load",
       "source": "scatterTable"
     },
     "sparse": {
@@ -54,18 +52,17 @@
         [56.6, 42.0, 0.0, 8.8, 5.8, 11.0],
         [72.3, -42.4, 0.0, 14.0, 9.4, 10.0]
       ],
-      "sceneMode": "load",
       "source": "scatterTable"
     }
   },
   "dataSetList": [
     {
-      "name": "geom_scatter_focus",
+      "name": "geom_scatter_focus_dense",
       "Nt_side": 4,
       "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "geom-geom",
-      "path": "data/geom_scatter_focus.mat",
+      "path": "data/geom_scatter_focus_dense.mat",
       "samplingArgs": {
         "txNumPerSc": 4,
         "rxNumPerSc": 4,
@@ -74,12 +71,44 @@
       }
     },
     {
-      "name": "list_anchor_fullrx",
+      "name": "list_anchor_fullrx_dense",
       "Nt_side": 4,
       "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "list-rand",
-      "path": "data/list_anchor_fullrx.mat",
+      "path": "data/list_anchor_fullrx_dense.mat",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [4, 4],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNum": -1
+      }
+    },
+        {
+      "name": "geom_scatter_focus_sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "geom-geom",
+      "path": "data/geom_scatter_focus_sparse.mat",
+      "samplingArgs": {
+        "txNumPerSc": 4,
+        "rxNumPerSc": 4,
+        "radiationMin": 10,
+        "radiationMax": 20
+      }
+    },
+    {
+      "name": "list_anchor_fullrx_sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "list-rand",
+      "path": "data/list_anchor_fullrx_sparse.mat",
       "samplingArgs": {
         "txGridList": [
           [30, 30],
@@ -97,9 +126,10 @@
     "VirtualScatter6D": {
       "modelId": "VirtualScatter6D",
       "responseFile": "data/response.mat",
+      "activeScenePreset": "sparse",
       "datasetSelection": {
-        "trainSet": "geom_scatter_focus",
-        "testSet": "list_anchor_fullrx"
+        "trainSet": "geom_scatter_focus_sparse",
+        "testSet": "list_anchor_fullrx_sparse"
       },
       "hyper": {
         "NumCenters": 4,
@@ -110,19 +140,20 @@
       }
     }
   },
-  "evaluation": {
+  "modelEvaluation": {
     "whichSet": "test",
-    "txGridList": [
-      [30, 30]
+    "cgmSliceMode": "fixRx",
+    "cgmGridList": [
+      [4,   4],
+      [56,  4]
     ],
-    "doPdf": true,
-    "doCgm": true,
-    "doResidual": true
+    "enablePdf": true,
+    "enableCgm": true,
+    "enableResidual": true
   },
-  "plots": {
-    "envTxHeatmapOrders": [1, 2, 3, 4, 5],
-    "doRxCount": true,
-    "doTxCount": true,
-    "saveFigures": true
+  "envEvaluation": {
+    "txHeatmapOrders": [1, 2, 3, 4, 5],
+    "enableRxCount": true,
+    "enableTxCount": true
   }
 }

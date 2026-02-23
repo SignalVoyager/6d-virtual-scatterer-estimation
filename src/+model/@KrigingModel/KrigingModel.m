@@ -88,7 +88,7 @@ classdef KrigingModel < ScatteringModel
 
         % evaluate - model-specific evaluation pipeline
         % Uses ScatteringModel's protected helper methods.
-        evaluate(obj, opt)
+        evaluate(obj, opt, savePath)
     end
 
     % ============================================================

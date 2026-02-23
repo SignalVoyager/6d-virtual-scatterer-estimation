@@ -1,4 +1,4 @@
-% evaluate(obj, whichSet, viewMode, varargin)
+% evaluate(obj, whichSet, viewMode, savePath, varargin)
 %
 % Visualize ray tracing outputs from the wireless environment simulation.
 %
@@ -9,6 +9,8 @@
 %               * "txHeatmap" - RX power heatmap for a specific TX (requires orderTx in varargin)
 %               * "rxCount"   - Count of RX observations per grid cell
 %               * "txCount"   - Count of TX observations per grid cell
+%   savePath  - string/char, output file base path (without extension).
+%               If empty, figures are not saved.
 %   varargin  - Optional arguments:
 %               * For "txHeatmap": orderTx (integer) - index of TX to visualize
 %
@@ -26,7 +28,7 @@
 %   - TX location marked with pink star marker and label on heatmap
 %   - All scatterers drawn as rectangles with labels
 %   - Axes set to normal orientation with equal aspect ratio
-function evaluate(obj, whichSet, viewMode, varargin)
+function evaluate(obj, whichSet, viewMode, savePath, varargin)
 if isempty(obj.raytracingResults)
     error('[WirelessEnvironment] No raytracingResults to plot.');
 end
@@ -55,6 +57,7 @@ Ky = floor(areaSize(2)/gridSize);
 xCenters = (-areaSize(1)/2 + gridSize/2) : gridSize : (areaSize(1)/2 - gridSize/2);
 yCenters = (-areaSize(2)/2 + gridSize/2) : gridSize : (areaSize(2)/2 - gridSize/2);
 
+orderTx = [];
 switch string(viewMode)
     case "txHeatmap"
         uniqTx = unique(txAll, 'stable');
@@ -76,13 +79,13 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, 10*log10(powerMap));
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)'); ylabel('y (m)');
-        title(sprintf('%s: RX heatmap (dBm), TX grid = %d', titlePrefix, txGridIdx));
+        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        title(sprintf('%s: RX heatmap (dBm), TX grid = %d', titlePrefix, txGridIdx), 'Interpreter', 'latex');
 
         hold on;
         [ty, tx] = ind2sub([Ky, Kx], txGridIdx);
         plot(xCenters(tx), yCenters(ty), 'p', 'MarkerSize', 14, 'LineWidth', 2);
-        text(xCenters(tx), yCenters(ty), '  TX', 'FontWeight', 'bold', 'VerticalAlignment','middle');
+        text(xCenters(tx), yCenters(ty), '  TX', 'FontWeight', 'bold', 'VerticalAlignment','middle', 'Interpreter', 'latex');
 
     case "rxCount"
         cntMap = zeros(Ky, Kx);
@@ -94,8 +97,8 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, cntMap);
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)'); ylabel('y (m)');
-        title(sprintf('%s: RX sampling count map', titlePrefix));
+        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        title(sprintf('%s: RX sampling count map', titlePrefix), 'Interpreter', 'latex');
 
     case "txCount"
         cntMap = zeros(Ky, Kx);
@@ -107,8 +110,8 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, cntMap);
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)'); ylabel('y (m)');
-        title(sprintf('%s: TX sampling count map', titlePrefix));
+        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        title(sprintf('%s: TX sampling count map', titlePrefix), 'Interpreter', 'latex');
 
     otherwise
         error('Unknown viewMode: %s', viewMode);
@@ -118,7 +121,17 @@ end
 hold on;
 for n = 1:size(scattererTable,1)
     rectangle('Position', [scattererTable(n,1), scattererTable(n,2), scattererTable(n,4), scattererTable(n,5)], 'LineWidth', 1.5);
-    text(scattererTable(n,1), scattererTable(n,2), sprintf(' S%d', n), 'FontWeight','bold', 'VerticalAlignment','bottom');
+    text(scattererTable(n,1), scattererTable(n,2), sprintf(' S%d', n), 'FontWeight','bold', 'VerticalAlignment','bottom', 'Interpreter', 'latex');
+end
+
+if strlength(string(savePath)) > 0
+    savePathStr = char(string(savePath));
+    [saveDir, ~, ~] = fileparts(savePathStr);
+    if ~isempty(saveDir) && ~isfolder(saveDir)
+        mkdir(saveDir);
+    end
+    saveas(gcf, string(savePathStr) + ".png");
+    savefig(gcf, string(savePathStr) + ".fig");
 end
 end
     
