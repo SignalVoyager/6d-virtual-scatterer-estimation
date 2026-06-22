@@ -1,0 +1,14 @@
+# Generated experiment data and results
+experiments/**/data/
+experiments/**/outputs/
+
+# MATLAB temporary/autosave files
+*.asv
+*.m~
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]
+
+# Local editor settings
+.vscode/

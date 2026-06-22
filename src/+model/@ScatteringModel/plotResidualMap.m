@@ -38,7 +38,7 @@
 function plotResidualMap(obj, txGrid, opt)
 if nargin < 3 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"topPercentile"), opt.topPercentile = 95; end
-if ~isfield(opt,"q"), opt.q = 0.02; end
+if ~isfield(opt,"q"), opt.q = 0.017; end
 if ~isfield(opt,"eps_min"), opt.eps_min = 1e-12; end
 
 C = obj.getPlotContext();

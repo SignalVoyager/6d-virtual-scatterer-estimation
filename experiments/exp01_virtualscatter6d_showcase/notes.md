@@ -1,46 +1,65 @@
-# Experiment Notes — VirtualScatter6D Showcase
+# Experiment Notes - VirtualScatter6D Showcase
 
 ## Goal
-This experiment is a **single-model showcase** focusing on **VirtualScatter6D** (formerly X2XSingleHop).  
-It is designed to produce **paper/slide-ready** diagnostics and performance evidence:
-- overall prediction accuracy on held-out data,
-- spatial diagnostics (CGM map, residual map),
-- sensitivity checks by switching scene presets (dense vs sparse),
-- fully reproducible outputs saved under one experiment folder.
+This experiment is the dense-scene single-model showcase for `VirtualScatter6D`.
+
+It produces the raw diagnostic figures and the final Fig. 1 intuitive panel:
+- ray-traced CGM slices for selected TX positions,
+- VirtualScatter6D predicted CGM slices for the same TX positions,
+- a composed 2x4 paper panel comparing prediction and ground truth,
+- run logs and reference metric tables.
 
 ## Folder Contract
-This experiment is self-contained under:
-- `data/`: intermediate artifacts and cached results (STL/PLY/XML, Train/Test MAT, response MAT, etc.)
-- `outputs/`: figures and summary artifacts
+This experiment is self-contained under `experiments/exp01_virtualscatter6d_showcase/`.
 
-The run script must **only** read/write inside this experiment folder (except importing `src/`).
+- `config.json`: scene, dataset, model, evaluation, and runtime switches
+- `run_experiment.m`: the experiment entry point
+- `data/`: cached datasets, scene files, and trained response artifacts
+- `outputs/logs/`: run logs and reference log-derived tables
+- `outputs/original/env/`: environment figures generated directly by the experiment code
+- `outputs/original/model/`: model diagnostic figures generated directly by the experiment code
+- `outputs/final/`: final paper-ready rendered outputs
+
+For Fig. 1, the curated package lives directly under:
+
+```text
+outputs/final/
+```
+
+That folder contains the composed `panel_composed_2x4.[png|fig]`. Source subfigures are regenerated under `outputs/original/env/` and `outputs/original/model/`.
 
 ## Configuration
-Primary file: `config.json`
+Primary file: `config.json`.
 
-Key switches:
-- `activeScenePreset`: selects one preset from `scenePresets` without editing code
-- `dataset.mode`: `"save"` regenerates datasets; `"load"` reuses cached MAT files
-- `models.activeModel`: must be `"VirtualScatter6D"` in this experiment
+Important switches:
+- `dataSetList[].activeScenePreset`: choose the scene for each dataset entry
+- `dataSetList[].dataMode`: use `"save"` to regenerate datasets and `"load"` for repeatable reruns
+- `models.activeModel`: expected to remain `"VirtualScatter6D"` here
+- `runtime.showFigures`: controls whether diagnostic figures are generated under `outputs/original/env/` and `outputs/original/model/`
+- `runtime.composeIntuitivePanel`: composes the Fig. 1 panel from `outputs/original/` into `outputs/final/`
+- `envEvaluation.cgmRaytraceDataMode`: use `"load"` to reuse the cached ground-truth CGM dataset; use `"save"` only when refreshing the ray-tracing cache
 
-Scene switching (no comments needed; JSON has no comments):
-- set `"activeScenePreset": "dense"` or `"sparse"`
+For the current Fig. 1 dense showcase, selected train/test datasets should consistently use the `dense` scene.
 
 ## Execution
-Recommended: run from project root via `main_all_experiments.m`.  
-Direct run: execute `run_experiment.m` after setting `expRoot`.
+Recommended:
 
-RNG:
-- seeds are injected by `main_all_experiments.m` for reproducibility.
+```matlab
+main_all_experiments
+```
+
+Direct run is also possible after setting `expRoot` to this experiment folder and then running `run_experiment.m`.
+
+RNG seeds are injected by `main_all_experiments.m`.
 
 ## Expected Outputs
-In `outputs/`:
-- environment plots: TX heatmaps / sampling count maps
-- model diagnostics: CGM maps + residual maps for chosen TX grids
-- optional PDF comparison plot (GT vs prediction)
-- optional saved summaries if you export metrics structs later
+After a normal run:
+- `outputs/original/env/`: environment TX heatmaps and ray-traced CGM slices
+- `outputs/original/model/`: model CGM outputs
+- `outputs/logs/`: runtime logs when log mode is enabled
+- `outputs/final/`: final composed Fig. 1 panel
 
 ## Best Practices
-- generate datasets once → then switch to `dataset.mode="load"`
-- keep `diagTxGridList` small (1–3 TX points)
-- for final figures: lock `seed`, `activeScenePreset`, and `dataset.mode="load"`
+- Generate datasets once, then switch dataset entries back to `"load"`.
+- Keep the Fig. 1 TX grid list fixed when refreshing the panel.
+- Treat `outputs/original/` as reproducible raw output and `outputs/final/` as publication material.

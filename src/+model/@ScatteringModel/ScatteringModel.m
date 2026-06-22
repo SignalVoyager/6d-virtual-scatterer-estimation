@@ -121,11 +121,16 @@ classdef (Abstract) ScatteringModel < handle
         %   and update obj.scatterInfo (and any subclass-specific state).
         train(obj)
 
-        % evaluate(obj, opt, savePath)
+        % [P, M, B] = evaluate(obj, opt, savePath)
         %   Model-specific evaluation pipeline. Subclasses decide:
         %     - which metrics to report
         %     - which plots to generate
         %     - which TXs to diagnose, etc.
+        %
+        % Returns:
+        %   P: standardized prediction pack from evalPrepare()
+        %   M: core metrics from evalMetricsCore()
+        %   B: bucket metrics from evalMetricsBuckets()
         %
         % savePath:
         %   output file prefix (without extension). Empty means no figure output.
@@ -140,7 +145,7 @@ classdef (Abstract) ScatteringModel < handle
         % Recommended behavior:
         %   - Call evalPrepare() first to standardize prediction + noise-floor handling.
         %   - Use evalMetricsCore()/evalMetricsBuckets()/evalReport() as reusable blocks.
-        evaluate(obj, opt, savePath)
+        [P, M, B] = evaluate(obj, opt, savePath)
                       
         % [gain_sum, gain_path, gamma_path] = predict(obj, pairsTR)
         %   Predict channel gain for a batch of TX/RX grid pairs.

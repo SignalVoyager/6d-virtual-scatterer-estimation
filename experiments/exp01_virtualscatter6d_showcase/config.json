@@ -5,7 +5,7 @@
   },
   "backend": {
     "condaEnv": "D:/Anaconda3/envs/scibase",
-    "sionnaModule": "../../src/+utils/sionna_rt_adapter.py"
+    "sionnaModule": "../../src/+utils/sionnaRtAdapter.py"
   },
   "radio": {
     "fc": 2600000000.0,
@@ -57,26 +57,11 @@
   },
   "dataSetList": [
     {
-      "name": "geom_scatter_focus_dense",
-      "Nt_side": 4,
-      "Nr_side": 4,
-      "dataMode": "load",
-      "samplingMode": "geom-geom",
-      "path": "data/geom_scatter_focus_dense.mat",
-      "samplingArgs": {
-        "txNumPerSc": 4,
-        "rxNumPerSc": 4,
-        "radiationMin": 10,
-        "radiationMax": 20
-      }
-    },
-    {
       "name": "list_anchor_fullrx_dense",
       "Nt_side": 4,
       "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "list-rand",
-      "path": "data/list_anchor_fullrx_dense.mat",
       "samplingArgs": {
         "txGridList": [
           [30, 30],
@@ -86,21 +71,8 @@
           [4, 56]
         ],
         "rxNum": -1
-      }
-    },
-        {
-      "name": "geom_scatter_focus_sparse",
-      "Nt_side": 4,
-      "Nr_side": 4,
-      "dataMode": "load",
-      "samplingMode": "geom-geom",
-      "path": "data/geom_scatter_focus_sparse.mat",
-      "samplingArgs": {
-        "txNumPerSc": 4,
-        "rxNumPerSc": 4,
-        "radiationMin": 10,
-        "radiationMax": 20
-      }
+      },
+      "activeScenePreset": "dense"
     },
     {
       "name": "list_anchor_fullrx_sparse",
@@ -108,7 +80,6 @@
       "Nr_side": 4,
       "dataMode": "load",
       "samplingMode": "list-rand",
-      "path": "data/list_anchor_fullrx_sparse.mat",
       "samplingArgs": {
         "txGridList": [
           [30, 30],
@@ -118,7 +89,90 @@
           [4, 56]
         ],
         "rxNum": -1
+      },
+      "activeScenePreset": "sparse"
+    },
+    {
+      "name": "geom_scatter_focus_dense",
+      "Nt_side": 5,
+      "Nr_side": 5,
+      "dataMode": "load",
+      "samplingMode": "geom-geom",
+      "samplingArgs": {
+        "txNumPerSc": 7,
+        "rxNumPerSc": 7,
+        "radiationMin": 15,
+        "radiationMax": 35
+      },
+      "activeScenePreset": "dense"
+    },
+    {
+      "name": "rand_rand_dense",
+      "activeScenePreset": "dense",
+      "Nt_side": 5,
+      "Nr_side": 5,
+      "dataMode": "load",
+      "samplingMode": "rand-rand",
+      "samplingArgs": {
+        "txNum": 6,
+        "rxNum": 100
       }
+    },
+    {
+      "name": "geom_scatter_focus_sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "geom-geom",
+      "samplingArgs": {
+        "txNumPerSc": 4,
+        "rxNumPerSc": 4,
+        "radiationMin": 10,
+        "radiationMax": 25
+      },
+      "activeScenePreset": "sparse"
+    },
+    {
+      "name": "list_rand_fixTx_sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "list-rand",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNum": 28
+      },
+      "activeScenePreset": "sparse"
+    },
+    {
+      "name": "rand_rand_fixTx_sparse",
+      "activeScenePreset": "sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "rand-rand",
+      "samplingArgs": {
+        "txNum": 4,
+        "rxNum": 112
+      }
+    },
+    {
+      "name": "randblock_randblock_sparse",
+      "Nt_side": 4,
+      "Nr_side": 4,
+      "dataMode": "load",
+      "samplingMode": "randblock-randblock",
+      "samplingArgs": {
+        "txNumPerBlock": 4,
+        "rxNumPerBlock": 4,
+        "numBlocks": 7
+      },
+      "activeScenePreset": "sparse"
     }
   ],
   "models": {
@@ -126,34 +180,46 @@
     "VirtualScatter6D": {
       "modelId": "VirtualScatter6D",
       "responseFile": "data/response.mat",
-      "activeScenePreset": "sparse",
       "datasetSelection": {
-        "trainSet": "geom_scatter_focus_sparse",
-        "testSet": "list_anchor_fullrx_sparse"
+        "trainSet": [
+          "geom_scatter_focus_dense",
+          "rand_rand_dense"
+        ],
+        "testSet": "list_anchor_fullrx_dense"
       },
       "hyper": {
-        "NumCenters": 4,
+        "NumCenters": 5,
         "PathLossExp": 2.0,
         "RefDistance": 1.0,
         "EpsDist": 0.001,
-        "Solver": "LS"
+        "Solver": "LS-Ridge"
       }
     }
   },
   "modelEvaluation": {
     "whichSet": "test",
-    "cgmSliceMode": "fixRx",
+    "cgmSliceMode": "fixTx",
     "cgmGridList": [
-      [4,   4],
-      [56,  4]
+        [22, 20],
+        [39, 25],
+        [39, 39],
+        [20, 39]
     ],
-    "enablePdf": true,
+    "enablePdf": false,
     "enableCgm": true,
-    "enableResidual": true
+    "enableResidual": false
   },
   "envEvaluation": {
     "txHeatmapOrders": [1, 2, 3, 4, 5],
-    "enableRxCount": true,
-    "enableTxCount": true
+    "enableCgmRaytrace": true,
+    "cgmRaytraceDataMode": "load",
+    "enableRxCount": false,
+    "enableTxCount": false
+  },
+  "runtime": {
+    "outputMode": "console",
+    "showFigures": true,
+    "composeIntuitivePanel": true,
+    "refreshFinalOnly": false
   }
 }

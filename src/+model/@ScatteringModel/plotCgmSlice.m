@@ -26,7 +26,11 @@ Ky = C.Ky;
 
 xCenters = C.xCenters; 
 yCenters = C.yCenters;
-invalidMask = C.invalidMask;
+if isfield(C, 'plotMask')
+    plotMask = C.plotMask;
+else
+    plotMask = C.invalidMask;
+end
 scatterTable = C.scatterTable;
 gridSize = C.gridSize;
 
@@ -35,7 +39,7 @@ assert(all(gridPos(1) >= 1 & gridPos(1) <= Kx), 'col out of range.');
 assert(all(gridPos(2) >= 1 & gridPos(2) <= Ky), 'row out of range.');
 
 fixedIdx = sub2ind([Ky, Kx], gridPos(2), gridPos(1));
-validLin = find(~invalidMask(:));
+validLin = find(~plotMask(:));
 
 fprintf('[%s.plot6D] mode=%s, fixed_idx=%d\n', ...
     obj.ModelSpec.modelId, mode, fixedIdx);
@@ -75,7 +79,9 @@ if ~isempty(vals)
     clim([prctile(vals,1), prctile(vals,99)]);
 end
 
-colorbar;
+cb = colorbar;
+cb.Label.String = 'Received power (dBm)';
+cb.Label.Interpreter = 'latex';
 set(gca, 'FontSize', 16);
 
 if strcmp(mode,'fixTx')

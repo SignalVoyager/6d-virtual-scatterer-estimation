@@ -39,6 +39,7 @@ glo_mse_dB = mean(err_dB.^2);
 rmse_dB    = sqrt(glo_mse_dB);
 mae_dB     = mean(abs(err_dB));
 medae_dB   = median(abs(err_dB));
+p90ae_dB   = quantile(abs(err_dB), 0.90);
 bias_dB    = mean(err_dB);
 
 % ---- correlations ----
@@ -72,6 +73,7 @@ M.glo_mse_dB = glo_mse_dB;
 M.rmse_dB = rmse_dB;
 M.mae_dB = mae_dB;
 M.medae_dB = medae_dB;
+M.p90ae_dB = p90ae_dB;
 M.bias_dB = bias_dB;
 
 M.rho_y_yhat = rho_y_yhat;
@@ -80,87 +82,4 @@ M.ab = ab;
 
 if isfield(P, "nTotal"), M.nTotal = P.nTotal; else, M.nTotal = numel(y_mW); end
 if isfield(P, "nValid"), M.nValid = P.nValid; else, M.nValid = numel(y_mW); end
-
-% ---- compact model score (0-100, higher is better) ----
-spec = iDefaultScoreSpec();
-if isfield(P, "scoreSpec") && isstruct(P.scoreSpec)
-    spec = iMergeScoreSpec(spec, P.scoreSpec);
-end
-
-sMaeDb  = iScoreLowerBetter(mae_dB,     spec.mae_dB_good,  spec.mae_dB_bad);
-sRmseDb = iScoreLowerBetter(rmse_dB,    spec.rmse_dB_good, spec.rmse_dB_bad);
-sNmse   = iScoreLowerBetter(nmse,       spec.nmse_good,    spec.nmse_bad);
-sBiasDb = iScoreLowerBetter(abs(bias_dB), spec.bias_dB_good, spec.bias_dB_bad);
-sCorr   = iScoreHigherBetter(rho_y_yhat, spec.corr_bad, spec.corr_good);
-
-w = spec.weights;
-w = w / max(sum(w), eps);
-score100 = 100 * ( ...
-    w(1)*sMaeDb + ...
-    w(2)*sRmseDb + ...
-    w(3)*sNmse + ...
-    w(4)*sBiasDb + ...
-    w(5)*sCorr);
-score100 = max(0, min(100, score100));
-
-M.score100 = score100;
-M.scoreBreakdown = struct( ...
-    'mae_dB', 100*sMaeDb, ...
-    'rmse_dB', 100*sRmseDb, ...
-    'nmse', 100*sNmse, ...
-    'abs_bias_dB', 100*sBiasDb, ...
-    'corr', 100*sCorr);
-end
-
-function s = iScoreLowerBetter(x, good, bad)
-if ~isfinite(x)
-    s = 0;
-    return;
-end
-if bad <= good
-    bad = good + eps;
-end
-s = (bad - x) / (bad - good);
-s = max(0, min(1, s));
-end
-
-function s = iScoreHigherBetter(x, bad, good)
-if ~isfinite(x)
-    s = 0;
-    return;
-end
-if good <= bad
-    good = bad + eps;
-end
-s = (x - bad) / (good - bad);
-s = max(0, min(1, s));
-end
-
-function spec = iDefaultScoreSpec()
-spec = struct();
-% Weights: [MAE_dB, RMSE_dB, NMSE, abs(Bias_dB), Corr]
-spec.weights = [0.30, 0.25, 0.20, 0.10, 0.15];
-
-% "good" and "bad" anchors for linear mapping to [0,1]
-spec.mae_dB_good = 1.0;
-spec.mae_dB_bad  = 12.0;
-spec.rmse_dB_good = 1.5;
-spec.rmse_dB_bad  = 15.0;
-spec.nmse_good = 0.02;
-spec.nmse_bad  = 1.0;
-spec.bias_dB_good = 0.5;
-spec.bias_dB_bad  = 6.0;
-spec.corr_good = 0.95;
-spec.corr_bad  = 0.20;
-end
-
-function out = iMergeScoreSpec(def, usr)
-out = def;
-keys = fieldnames(def);
-for i = 1:numel(keys)
-    k = keys{i};
-    if isfield(usr, k)
-        out.(k) = usr.(k);
-    end
-end
 end

@@ -1,5 +1,5 @@
 % EVALUATE Evaluate the virtual scatterer 3D model on a specified dataset
-%   evaluate(obj, opt, savePath) performs comprehensive evaluation of the trained 3D
+%   [P, M, B] = evaluate(obj, opt, savePath) performs comprehensive evaluation of the trained 3D
 %   virtual scatterer model, including metrics computation, PDF comparisons, 
 %   and spatial diagnostics visualizations.
 %
@@ -30,7 +30,9 @@
 %                   if empty, figures are not saved.
 %
 %   OUTPUTS:
-%       None. Results are reported via console output and generated plots.
+%       P           struct - Standardized prediction pack from evalPrepare().
+%       M           struct - Core metrics from evalMetricsCore().
+%       B           struct - Bucket metrics from evalMetricsBuckets().
 %
 %   NOTES:
 %       - Requires scatterInfo to be populated; call train() first
@@ -39,8 +41,11 @@
 %
 %   EXAMPLE:
 %       opt = struct('whichSet', 'test', 'txGridList', [30 30; 20 20]);
-%       evaluate(obj, opt, fullfile("outputs", "VirtualScatter3D_seed421"));
-function evaluate(obj, opt, savePath)
+%       [P, M, B] = evaluate(obj, opt, fullfile("outputs", "VirtualScatter3D_seed421"));
+function [P, M, B] = evaluate(obj, opt, savePath)
+if nargin < 3 || isempty(savePath)
+    savePath = "";
+end
 if nargin < 2 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"whichSet"),      opt.whichSet = "test"; end
 if ~isfield(opt,"txGridList"),    opt.txGridList = [30 30]; end
@@ -51,7 +56,7 @@ if ~isfield(opt,"doCgm"),         opt.doCgm = true; end
 if ~isfield(opt,"doResidual"),    opt.doResidual = true; end
 
 % knobs consumed by base blocks / plots
-if ~isfield(opt,"q"),             opt.q = 0.02; end
+if ~isfield(opt,"q"),             opt.q = 0.017; end
 if ~isfield(opt,"eps_min"),       opt.eps_min = 1e-12; end
 if ~isfield(opt,"eps_mW"),        opt.eps_mW = opt.eps_min; end
 if ~isfield(opt,"binWidth_dB"),   opt.binWidth_dB = 1.0; end

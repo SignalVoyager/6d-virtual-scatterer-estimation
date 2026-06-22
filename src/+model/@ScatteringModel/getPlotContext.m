@@ -4,7 +4,9 @@
 % This function generates a structured output containing grid coordinates,
 % axis centers, and a mask identifying grid cells that overlap with any
 % scatterers in the scene. The invalid mask marks cells that intersect with
-% scatterer bounding boxes (including a buffer zone of half grid size).
+% scatterer bounding boxes. Two masks are provided:
+% invalidMask keeps the conservative half-grid buffer used by diagnostics,
+% while plotMask only hides building interiors for smoother CGM rendering.
 %
 % Syntax:
 %   C = getPlotContext(obj)
@@ -19,7 +21,8 @@
 %       .K              - Total number of grid cells (Kx * Ky)
 %       .xCenters       - X-axis coordinates of grid cell centers (1 x Kx)
 %       .yCenters       - Y-axis coordinates of grid cell centers (1 x Ky)
-%       .invalidMask    - Boolean mask marking cells overlapping scatterers (Ky x Kx)
+%       .invalidMask    - Conservative mask with half-grid buffer (Ky x Kx)
+%       .plotMask       - Building-footprint mask without buffer (Ky x Kx)
 %
 % Notes:
 %   - Grid is centered at origin with cells aligned to gridSize intervals
@@ -50,6 +53,13 @@ inRect = (xg >= xL) & (xg <= xR) & (yg >= yB) & (yg <= yT);
 inAny  = any(inRect, 2);
 invalidMask = reshape(inAny, Ky, Kx);
 
+xL0 = scatterTable(:,1).';
+yB0 = scatterTable(:,2).';
+xR0 = (scatterTable(:,1)+scatterTable(:,4)).';
+yT0 = (scatterTable(:,2)+scatterTable(:,5)).';
+inRectPlot = (xg >= xL0) & (xg <= xR0) & (yg >= yB0) & (yg <= yT0);
+plotMask = reshape(any(inRectPlot, 2), Ky, Kx);
+
 C = struct();
 C.scatterTable = scatterTable;
 C.gridSize = gridSize;
@@ -58,4 +68,5 @@ C.Kx = Kx; C.Ky = Ky; C.K = K;
 C.xCenters = xCenters;
 C.yCenters = yCenters;
 C.invalidMask = invalidMask;
+C.plotMask = plotMask;
 end

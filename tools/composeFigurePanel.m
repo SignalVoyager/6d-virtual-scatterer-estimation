@@ -1,11 +1,18 @@
-function compose_figure_panel()
-% compose_figure_panel
-% Batch-compose panel figures from subfolders under src/+utils/selected_figs.
-% Each subfolder is processed independently and outputs are saved back
-% into the same subfolder.
+﻿function composeFigurePanel(rootDir)
+% composeFigurePanel
+% Batch-compose panel figures under rootDir.
+% If rootDir contains .fig files, it is processed directly. Otherwise each
+% subfolder is processed independently. Outputs are saved back beside inputs.
+%
+% Usage:
+%   composeFigurePanel()                         % use current folder
+%   composeFigurePanel("docs/S_Fig1_intuitive")  % use explicit folder
 
 cfg = struct();
-cfg.rootDir = fullfile("src", "+utils", "selected_figs");
+if nargin < 1 || isempty(rootDir)
+    rootDir = pwd;
+end
+cfg.rootDir = rootDir;
 cfg.targetSubfolders = strings(0, 1); % empty => process all subfolders
 cfg.fileOrder = strings(0, 1); % optional order within each subfolder
 cfg.outputName = "panel_composed";
@@ -42,22 +49,27 @@ cfg.pngResolution = 300;
 cfg.openMode = "last";
 
 if ~isfolder(cfg.rootDir)
-    error("compose_figure_panel:RootDirMissing", ...
+    error("composeFigurePanel:RootDirMissing", ...
         "Root directory does not exist: %s", cfg.rootDir);
 end
 
-subDirs = listTargetSubfolders(cfg.rootDir, cfg.targetSubfolders);
+rootFigList = collectFigList(cfg.rootDir, cfg.fileOrder, cfg.outputName);
+if ~isempty(rootFigList)
+    subDirs = string(cfg.rootDir);
+else
+    subDirs = listTargetSubfolders(cfg.rootDir, cfg.targetSubfolders);
+end
 if isempty(subDirs)
-    error("compose_figure_panel:NoSubfolders", ...
-        "No subfolders found under %s", cfg.rootDir);
+    error("composeFigurePanel:NoSubfolders", ...
+        "No figure folders found under %s", cfg.rootDir);
 end
 
 lastPanelFig = gobjects(0);
 for s = 1:numel(subDirs)
     subDir = subDirs(s);
-    figList = collectFigList(subDir, cfg.fileOrder);
+    figList = collectFigList(subDir, cfg.fileOrder, cfg.outputName);
     if isempty(figList)
-        warning("compose_figure_panel:NoFigFiles", ...
+        warning("composeFigurePanel:NoFigFiles", ...
             "Skip %s (no .fig files).", subDir);
         continue;
     end
@@ -74,13 +86,13 @@ switch lower(string(cfg.openMode))
             figure(lastPanelFig);
         end
     case "all"
-        allPanels = findall(0, "Type", "figure", "Tag", "compose_figure_panel_output");
+        allPanels = findall(0, "Type", "figure", "Tag", "composeFigurePanel_output");
         for i = 1:numel(allPanels)
             set(allPanels(i), "Visible", "on");
             figure(allPanels(i));
         end
     otherwise
-        warning("compose_figure_panel:UnknownOpenMode", ...
+        warning("composeFigurePanel:UnknownOpenMode", ...
             "Unknown openMode=%s, fallback to 'last'.", cfg.openMode);
         if ~isempty(lastPanelFig) && isgraphics(lastPanelFig)
             set(lastPanelFig, "Visible", "on");
@@ -88,14 +100,14 @@ switch lower(string(cfg.openMode))
         end
 end
 
-fprintf("[compose_figure_panel] done. root=%s, subfolders=%d\n", cfg.rootDir, numel(subDirs));
+fprintf("[composeFigurePanel] done. root=%s, subfolders=%d\n", cfg.rootDir, numel(subDirs));
 end
 
 function panelFig = composeOneFolder(figList, cfg, subDir)
 numPanels = numel(figList);
 [nRows, nCols] = resolveLayout(cfg.layout, cfg.defaultRows, numPanels);
 
-panelFig = figure("Color", "w", "Visible", "off", "Tag", "compose_figure_panel_output");
+panelFig = figure("Color", "w", "Visible", "off", "Tag", "composeFigurePanel_output");
 t = tiledlayout(panelFig, nRows, nCols, ...
     "TileSpacing", cfg.tileSpacing, ...
     "Padding", cfg.padding);
@@ -108,7 +120,7 @@ for i = 1:numPanels
     srcAx = findobj(srcFig, "Type", "axes", "-not", "Tag", "legend", "-not", "Tag", "Colorbar");
     if isempty(srcAx)
         close(srcFig);
-        warning("compose_figure_panel:NoAxes", "Skip %s (no axes found).", figList(i));
+        warning("composeFigurePanel:NoAxes", "Skip %s (no axes found).", figList(i));
         continue;
     end
 
@@ -141,7 +153,7 @@ if cfg.saveFig
     savefig(panelFig, outBase + ".fig");
 end
 
-fprintf("[compose_figure_panel] subfolder=%s, panels=%d, output=%s\n", subDir, numPanels, outBase);
+fprintf("[composeFigurePanel] subfolder=%s, panels=%d, output=%s\n", subDir, numPanels, outBase);
 end
 
 function subDirs = listTargetSubfolders(rootDir, targetSubfolders)
@@ -158,7 +170,7 @@ else
     for i = 1:numel(req)
         hit = find(strcmpi(names, req(i)), 1);
         if isempty(hit)
-            warning("compose_figure_panel:SubfolderMissing", ...
+            warning("composeFigurePanel:SubfolderMissing", ...
                 "targetSubfolders item not found: %s", req(i));
         else
             pick(end+1, 1) = names(hit); %#ok<AGROW>
@@ -170,7 +182,7 @@ subDirs = fullfile(rootDir, pick);
 subDirs = subDirs(:);
 end
 
-function figList = collectFigList(sourceDir, fileOrder)
+function figList = collectFigList(sourceDir, fileOrder, outputName)
 figFiles = dir(fullfile(sourceDir, "*.fig"));
 if isempty(figFiles)
     figList = strings(0, 1);
@@ -178,6 +190,17 @@ if isempty(figFiles)
 end
 
 allNames = string({figFiles.name});
+outputFigName = string(outputName);
+if ~endsWith(outputFigName, ".fig", "IgnoreCase", true)
+    outputFigName = outputFigName + ".fig";
+end
+outputStem = erase(outputFigName, ".fig");
+allNames = allNames(~strcmpi(allNames, outputFigName) & ...
+    ~startsWith(lower(allNames), lower(outputStem + "_")));
+if isempty(allNames)
+    figList = strings(0, 1);
+    return;
+end
 [~, idxSort] = sort(lower(allNames));
 allNames = allNames(idxSort);
 
@@ -202,7 +225,7 @@ for i = 1:numel(order)
         figList(end+1, 1) = fullfile(sourceDir, allNames(hit)); %#ok<AGROW>
         used(hit) = true;
     else
-        warning("compose_figure_panel:OrderNameMissing", ...
+        warning("composeFigurePanel:OrderNameMissing", ...
             "File in fileOrder not found: %s", order(i));
     end
 end
@@ -222,7 +245,7 @@ else
     nRows = layout(1);
     nCols = layout(2);
     if nRows * nCols < numPanels
-        error("compose_figure_panel:LayoutTooSmall", ...
+        error("composeFigurePanel:LayoutTooSmall", ...
             "layout=[%d %d] cannot hold %d panels.", nRows, nCols, numPanels);
     end
 end
@@ -275,18 +298,6 @@ end
 title(dstAx, titleText, "Interpreter", cfg.titleInterpreter, "FontWeight", "normal");
 end
 
-function applyPanelLabel(ax, idx, cfg)
-% Deprecated behavior: labels are now merged into subplot titles.
-% Keep function as no-op for compatibility.
-if nargin >= 1 %#ok<INUSD>
-end
-if nargin >= 2 %#ok<INUSD>
-end
-if nargin >= 3 %#ok<INUSD>
-end
-return;
-end
-
 function token = toAlphabeticalToken(idx)
 letters = 'abcdefghijklmnopqrstuvwxyz';
 tokenChars = '';
@@ -315,7 +326,7 @@ switch mode
     case "global"
         legend(ax, "off");
     otherwise
-        warning("compose_figure_panel:UnknownLegendMode", ...
+        warning("composeFigurePanel:UnknownLegendMode", ...
             "Unknown legendMode=%s; fallback to 'first'.", legendMode);
         if idx == 1
             legend(ax, "show", "Interpreter", cfg.legendInterpreter);
@@ -339,3 +350,5 @@ for i = 1:numel(ln)
     labels(end+1, 1) = name; %#ok<AGROW>
 end
 end
+
+

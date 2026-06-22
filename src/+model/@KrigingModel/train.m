@@ -1,12 +1,42 @@
-function train(obj, varargin)
-% train - fit per-TX kriging models using training set.
+% TRAIN Trains per-transmitter Kriging models using raytracing results
 %
-% Optional name-value:
-%   "mode" : "fit"|"save"|"load" (default "fit")
+% SYNTAX:
+%   train(obj)
+%   train(obj, Name, Value)
+%
+% DESCRIPTION:
+%   Performs per-transmitter training in 2D spatial domain (x,y) using
+%   ordinary Kriging in dBm space.
+%
+% INPUT PARAMETERS:
+%   obj          - KrigingModel object
+%   mode         - (Name-Value) Training mode, one of:
+%                  "fit"   - Train and store model in memory (default)
+%                  "load"  - Load previously trained model from disk
+%                  "save"  - Train and save model to disk
+%
+% ALGORITHM:
+%   For each unique transmitter in the training set:
+%   1. Extract TX-specific pairsTR=[tx_idx, rx_idx] and powMw
+%   2. Inside fitOneTxModel: map RX index to (x,y), convert mW to dBm
+%   3. Fit per-TX variogram + ordinary Kriging model
+%
+% OUTPUT:
+%   Populates obj.scatterInfo with:
+%   - txModels: containers.Map keyed by tx_idx string
+%   - meta:     Training metadata and hyperparameters
+%
+% NOTES:
+%   - Requires obj.raytracingResults.trainSet to be populated
+%   - Uses model properties: MaxDistance, NumBins, StableAlpha
+%
+% SEE ALSO:
+%   fitOneTxModel, predict, loadModel, saveModel
+function train(obj, varargin)
 p = inputParser;
 p.addParameter("mode", "fit");
 p.parse(varargin{:});
-mode = string(p.Results.mode);
+mode = lower(string(p.Results.mode));
 
 if mode == "load"
     obj.loadModel();
@@ -14,75 +44,39 @@ if mode == "load"
 end
 
 trainSet = obj.raytracingResults.trainSet;
-assert(~isempty(trainSet), "[KrigingModel.train] Empty trainSet.");
 
-% Global fallback: mean in dB (ignoring non-positive)
-y = trainSet(:,3);
-y = y(y>0);
-if isempty(y)
-    globalMeanDb = -100;
-else
-    globalMeanDb = mean(10*log10(y));
-end
-obj.GlobalFallback.meanDb = globalMeanDb;
+txList = unique(trainSet(:,1), 'stable');
+txModels = containers.Map('KeyType','char','ValueType','any');
 
-% Group by TX
-txAll = trainSet(:,1);
-txList = unique(txAll, 'stable');
+fprintf("[KrigingModel.train] TX count=%d\n", numel(txList));
 
-if obj.KrigingSpec.verbose
-    fprintf("[KrigingModel.train] TX count=%d, minSamplesPerTx=%d\n", ...
-        numel(txList), obj.KrigingSpec.minSamplesPerTx);
-end
+for k = 1:numel(txList)
+    txIdx = txList(k);
+    subSet = trainSet((trainSet(:,1) == txIdx), :);
 
-for i = 1:numel(txList)
-    txIdx = txList(i);
-    mask = (txAll == txIdx);
-    sub = trainSet(mask, :);
-    rxIdx = sub(:,2);
-    powMw = sub(:,3);
+    pairsTR = subSet(:,1:2);
+    powMw = subSet(:,3);
 
-    % Convert rx index to XY
-    [x, yxy] = obj.rxIdxToXY(rxIdx);
-    zDb = 10*log10(max(powMw, 1e-12));
-    zDb(isinf(zDb)) = -100;
+    txModel = fitOneTxModel(obj, pairsTR, powMw);
+    
+    modelKey = sprintf("%d", txModel.tx_idx);
+    txModels(modelKey) = txModel;
 
-    % Optional subsampling for speed (keep stable but random)
-    if numel(zDb) > obj.KrigingSpec.maxPairsForFit
-        keep = randperm(numel(zDb), obj.KrigingSpec.maxPairsForFit);
-        x = x(keep); yxy = yxy(keep); zDb = zDb(keep);
-    end
-
-    modelKey = obj.txKey(txIdx);
-
-    try
-        if numel(zDb) < obj.KrigingSpec.minSamplesPerTx
-            txModel = obj.makeFallbackModel(txIdx, x, yxy, zDb, "too_few_samples");
-        else
-            txModel = obj.fitOneTxModel(txIdx, x, yxy, zDb);
-        end
-    catch ME
-        txModel = obj.makeFallbackModel(txIdx, x, yxy, zDb, "fit_failed:" + string(ME.identifier));
-        if obj.KrigingSpec.verbose
-            warning("[KrigingModel.train] TX=%d fit failed: %s", txIdx, ME.message);
-        end
-    end
-
-    obj.TxModels(modelKey) = txModel;
-
-    if obj.KrigingSpec.verbose && mod(i, max(1, floor(numel(txList)/10))) == 0
-        fprintf("[KrigingModel.train] progress %d/%d\n", i, numel(txList));
-    end
+    fprintf("[KrigingModel.train] progress %d/%d\n", k, numel(txList));
 end
 
-% Store into scatterInfo for save/load compatibility
-obj.scatterInfo = struct();
-obj.scatterInfo.modelType = "KrigingModel";
-obj.scatterInfo.KrigingSpec = obj.KrigingSpec;
-obj.scatterInfo.GlobalFallback = obj.GlobalFallback;
-obj.scatterInfo.TxModels = obj.TxModels; % containers.Map is savable in MAT
+obj.scatterInfo = struct( ...
+    "txModels", txModels, ...
+    "meta", struct( ...
+        "MaxDistance", obj.MaxDistance, ...
+        "NumBins", obj.NumBins, ...
+        "StableAlpha", obj.StableAlpha, ...
+        "UseWeightedFit", obj.UseWeightedFit, ...
+        "KNeighbors", obj.KNeighbors, ...
+        "PowerDomain", obj.PowerDomain));
 
 if mode == "save"
     obj.saveModel();
 end
 end
+

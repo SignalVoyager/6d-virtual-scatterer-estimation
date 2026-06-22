@@ -8,11 +8,13 @@ This project builds and evaluates **channel gain / knowledge maps** using:
 
 ## Layout
 - `src/`: core MATLAB code (classes + utilities)
+- `tools/`: reusable post-processing helpers for composing figure panels and result tables
 - `experiments/<exp_name>/`:
-  - `config.json`: experiment-local configuration (including multiple scene presets)
+  - `config.json`: experiment-local configuration (`dataSetList` + per-dataset `activeScenePreset`)
   - `run_experiment.m`: experiment-local execution script
   - `data/`: intermediate/cache artifacts
   - `outputs/`: figures/metrics/logs
+  - `S_Fig*/`: figure-specific source data, plotting scripts, and final rendered outputs when a figure belongs to this experiment
   - `notes.md`: experiment intent + usage notes
 - `main_all_experiments.m`: top-level orchestration (select experiments + seeds)
 
@@ -29,8 +31,10 @@ Direct run:
 
 ## Configuration Principles
 - JSON does not support comments:
-  - keep multiple environments under `scenePresets`
-  - select one via `activeScenePreset`
+  - keep multiple environments under `scenes`
+  - set `dataSetList[].activeScenePreset` to choose which scene each dataset uses
+  - dataset files are saved/loaded by convention at `data/<dataset.name>.mat`
+  - keep selected train/test datasets scene-consistent for one run
 - Use `dataset.mode="save"` only when regenerating ray-tracing datasets.
   Otherwise use `"load"` for repeatability and speed.
 

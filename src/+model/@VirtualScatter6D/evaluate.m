@@ -1,7 +1,7 @@
 % EVALUATE - Example evaluation pipeline (calls all reusable blocks)
 %
 % SYNTAX:
-%   evaluate(obj, opt, savePath)
+%   [P, M, B] = evaluate(obj, opt, savePath)
 %
 % DESCRIPTION:
 %   This implementation is intentionally "full": it calls all base blocks and
@@ -12,6 +12,11 @@
 %   opt     - (optional) struct with configuration options
 %   savePath - output file path prefix (without extension). If empty,
 %              figures are not saved.
+%
+% OUTPUTS:
+%   P       - Standardized prediction pack from evalPrepare()
+%   M       - Core metrics from evalMetricsCore()
+%   B       - Bucket metrics from evalMetricsBuckets()
 %
 % OPTIONS:
 %   whichSet       - Dataset to evaluate on (default: "test")
@@ -42,7 +47,10 @@
 % ERRORS:
 %   Throws error if scatterInfo is empty
 %   Throws error if txGridList is not properly formatted
-function evaluate(obj, opt, savePath)
+function [P, M, B] = evaluate(obj, opt, savePath)
+if nargin < 3 || isempty(savePath)
+    savePath = "";
+end
 if nargin < 2 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"whichSet"),      opt.whichSet = "test"; end
 if ~isfield(opt,"txGridList"),    opt.txGridList = [30 30]; end
@@ -53,7 +61,7 @@ if ~isfield(opt,"doCgm"),         opt.doCgm = true; end
 if ~isfield(opt,"doResidual"),    opt.doResidual = true; end
 
 % knobs consumed by base blocks / plots
-if ~isfield(opt,"q"),             opt.q = 0.02; end
+if ~isfield(opt,"q"),             opt.q = 0.017; end
 if ~isfield(opt,"eps_min"),       opt.eps_min = 1e-12; end
 if ~isfield(opt,"eps_mW"),        opt.eps_mW = opt.eps_min; end
 if ~isfield(opt,"binWidth_dB"),   opt.binWidth_dB = 1.0; end
@@ -65,6 +73,18 @@ if isempty(obj.scatterInfo)
 end
 fprintf('\n[VirtualScatter6D.evaluate] Evaluating ...\n');
 figsBefore = findall(0, 'Type', 'figure');
+
+doSave = strlength(string(savePath)) > 0;
+savePathStr = char(string(savePath));
+if doSave
+    [saveDir, ~, ~] = fileparts(savePathStr);
+    if ~isempty(saveDir) && ~isfolder(saveDir)
+        mkdir(saveDir);
+    end
+    if ~isfolder(savePathStr)
+        mkdir(savePathStr);
+    end
+end
 
 % ----- 1) standardized prediction pack -----
 P = obj.evalPrepare(opt.whichSet, opt);
@@ -79,6 +99,11 @@ obj.evalReport(M, B);
 % ----- 4) PDF -----
 if opt.doPdf
     obj.plotPdfCompare(P, opt);
+    if doSave
+        baseName = fullfile(savePath, 'pdf_compare');
+        saveas(gcf, string(baseName) + ".png");
+        savefig(gcf, string(baseName) + ".fig");
+    end
 end
 
 % ----- 5) spatial diagnostics -----
@@ -89,22 +114,26 @@ end
 if opt.doCgm
     for i = 1:size(opt.cgmGridList,1)
         obj.plotCgmSlice(char(string(opt.cgmSliceMode)), opt.cgmGridList(i,:));
+        if doSave
+            baseName = fullfile(savePath, sprintf('cgm_%s_grid%d', opt.cgmSliceMode, i));
+            saveas(gcf, string(baseName) + ".png");
+            savefig(gcf, string(baseName) + ".fig");
+        end
     end
 end
 
 if opt.doResidual
     for i = 1:size(opt.cgmGridList,1)
         obj.plotResidualMap(opt.cgmGridList(i,:), opt);
+        if doSave
+            baseName = fullfile(savePath, sprintf('residual_grid%d', i));
+            saveas(gcf, string(baseName) + ".png");
+            savefig(gcf, string(baseName) + ".fig");
+        end
     end
 end
 
-if strlength(string(savePath)) > 0
-    savePathStr = char(string(savePath));
-    [saveDir, ~, ~] = fileparts(savePathStr);
-    if ~isempty(saveDir) && ~isfolder(saveDir)
-        mkdir(saveDir);
-    end
-
+if doSave
     figsAfter = findall(0, 'Type', 'figure');
     figs = setdiff(figsAfter, figsBefore);
     if ~isempty(figs)

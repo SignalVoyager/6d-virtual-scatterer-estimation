@@ -30,7 +30,7 @@
 %   See also: PREDICT, APPLYNOISEFLOOR
 function P = evalPrepare(obj, whichSet, opt)
 if nargin < 3 || isempty(opt), opt = struct(); end
-if ~isfield(opt,"q"), opt.q = 0.02; end
+if ~isfield(opt,"q"), opt.q = 0.017; end
 if ~isfield(opt,"eps_min"), opt.eps_min = 1e-12; end
 if ~isfield(opt,"eps_mW"), opt.eps_mW = 1e-12; end
 
@@ -52,8 +52,11 @@ end
 % predict
 [gain_sum, ~, ~] = obj.predict(data(:,1:2));
 
-y_mW    = data(:,3);
-yhat_mW = gain_sum(:);
+y_mW_raw    = data(:,3);
+yhat_mW_raw = gain_sum(:);
+
+y_mW    = y_mW_raw;
+yhat_mW = yhat_mW_raw;
 
 % noise floor projection (linear domain)
 % If you use utils package: utils.applyNoiseFloor
@@ -71,6 +74,8 @@ err_dB   = y_dBm - yhat_dBm;
 
 P = struct();
 P.data    = data;
+P.y_mW_raw    = y_mW_raw;
+P.yhat_mW_raw = yhat_mW_raw;
 P.y_mW    = y_mW;
 P.yhat_mW = yhat_mW;
 P.res_mW  = res_mW;

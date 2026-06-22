@@ -79,7 +79,10 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, 10*log10(powerMap));
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        cb = colorbar;
+        cb.Label.String = 'Received power (dBm)';
+        cb.Label.Interpreter = 'latex';
+        xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
         title(sprintf('%s: RX heatmap (dBm), TX grid = %d', titlePrefix, txGridIdx), 'Interpreter', 'latex');
 
         hold on;
@@ -97,7 +100,10 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, cntMap);
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        cb = colorbar;
+        cb.Label.String = 'RX count';
+        cb.Label.Interpreter = 'latex';
+        xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
         title(sprintf('%s: RX sampling count map', titlePrefix), 'Interpreter', 'latex');
 
     case "txCount"
@@ -110,7 +116,10 @@ switch string(viewMode)
         figure;
         imagesc(xCenters, yCenters, cntMap);
         set(gca,'YDir','normal'); axis equal tight;
-        colorbar; xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
+        cb = colorbar;
+        cb.Label.String = 'TX count';
+        cb.Label.Interpreter = 'latex';
+        xlabel('x (m)', 'Interpreter', 'latex'); ylabel('y (m)', 'Interpreter', 'latex');
         title(sprintf('%s: TX sampling count map', titlePrefix), 'Interpreter', 'latex');
 
     otherwise

@@ -1,4 +1,4 @@
-% MAIN_ALL_EXPERIMENTS - Entry point for running multiple experiments with different RNG seeds
+﻿% MAIN_ALL_EXPERIMENTS - Entry point for running multiple experiments with different RNG seeds
 %
 % SYNTAX:
 %   main_all_experiments()
@@ -46,25 +46,45 @@ function main_all_experiments()
     addpath(genpath(fullfile(projectRoot, "src")));
 
     % ---------- choose experiments ----------
-    % expNames = ["exp02_model_comparison"]; % cell array of experiment folder names under project/experiments/
-    expNames = ["exp01_virtualscatter6d_showcase"];
+    expNames = ["exp03_model_comparison"]; % cell array of experiment folder names under project/experiments/
+    % expNames = ["exp03_model_comparison"];
 
     % ---------- choose RNG seeds ----------
-    rngValues = [421];  % can be vector
+    % rngValues = [521,75,185,19,424,7172,1,2354,888,48];  % can be vector
+    rngValues = [521];
 
     for e = 1:numel(expNames)
         expName = expNames(e);
         expRoot = fullfile(projectRoot, "experiments", expName);
+        cfgPath = fullfile(expRoot, "config.json");
+        logDir = fullfile(expRoot, "outputs", "logs");
+        logFile = fullfile(logDir, sprintf("%s.log", expName));
+        runScript = fullfile(expRoot, "run_experiment.m");
 
         % minimal sanity
         assert(isfolder(expRoot), "Experiment folder not found: %s", expRoot);
-        assert(isfile(fullfile(expRoot, "config.json")), "Missing config.json in %s", expRoot);
-        assert(isfile(fullfile(expRoot, "run_experiment.m")), "Missing run_experiment.m in %s", expRoot);
+        assert(isfile(cfgPath), "Missing config.json in %s", expRoot);
+        assert(isfile(runScript), "Missing run_experiment.m in %s", expRoot);
+
+        cfg = jsondecode(fileread(cfgPath));
+        if isstruct(cfg.dataSetList), cfg.dataSetList = num2cell(cfg.dataSetList); end
+        utils.validateExperimentConfig(cfg);
+        outputMode = lower(string(cfg.runtime.outputMode));
+        doLog = (outputMode == "log");
+        if doLog
+            assert(isfolder(logDir), "Missing log directory: %s", logDir);
+            if isfile(logFile), delete(logFile); end
+        end
 
         for s = 1:numel(rngValues)
             seed = rngValues(s);
 
             fprintf("\n================ EXP: %s | SEED: %d ================\n", expName, seed);
+            if doLog
+                fprintf("Log file: %s\n", logFile);
+            else
+                fprintf("Output mode: console (no log file)\n");
+            end
 
             % ---------- reset runtime state ----------
             clc;
@@ -77,9 +97,34 @@ function main_all_experiments()
             % you may also want:
             % clear classes;
 
-            % ---------- run experiment-local script ----------
-            % Inject expRoot + seed so the local script stays self-contained.
-            run(fullfile(expRoot, "run_experiment.m"));
+            % ---------- run experiment-local script + full logging ----------
+            tSeed = tic;
+            seedStart = char(datetime("now", "Format", "yyyy-MM-dd HH:mm:ss"));
+            runScriptEsc = strrep(char(runScript), '''', '''''');
+            runCmd = sprintf('run(''%s'');', runScriptEsc);
+
+            try
+                if outputMode == "console"
+                    % Console-only mode: keep real-time output.
+                    run(runScript);
+                else
+                    % Log mode: capture output for log writing.
+                    runOutput = evalc(runCmd);
+                    utils.appendSeedLog(logFile, expName, seed, seedStart, ...
+                        sprintf("[END]   %s (%.2fs)\n", ...
+                        char(datetime("now", "Format", "yyyy-MM-dd HH:mm:ss")), toc(tSeed)), ...
+                        string(runOutput));
+                end
+            catch ME
+                if doLog
+                    utils.appendSeedLog(logFile, expName, seed, seedStart, ...
+                        sprintf("[FAILED] %s (%.2fs)\n", ...
+                        char(datetime("now", "Format", "yyyy-MM-dd HH:mm:ss")), toc(tSeed)), ...
+                        string(getReport(ME, "extended", "hyperlinks", "off")));
+                end
+                rethrow(ME);
+            end
         end
     end
 end
+

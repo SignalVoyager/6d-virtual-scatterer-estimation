@@ -1,4 +1,5 @@
 import os
+
 """
 Sionna Ray Tracing Adapter Module
 This module provides a high-level interface to Sionna's ray tracing engine for computing
@@ -37,9 +38,9 @@ from sionna.rt import load_scene, Transmitter, Receiver, PathSolver, PlanarArray
 ENABLE_SCATTERING = True     # True: enable diffuse scattering; False: mirror-like only
 SEED = 1
 
-ENABLE_REFRACTION = False      # 你当前是 True；如需更像 MATLAB，可设 False
+ENABLE_REFRACTION = False      
 ENABLE_EDGE_DIFFRACTION = True
-SYNTHETIC_ARRAY = False        # 你之前用 True；若只用 1x1 阵列也可以关掉（性能相关）
+SYNTHETIC_ARRAY = False
 
 _SCENE_CACHE = {}
 _PATH_SOLVER = PathSolver()  # 全局复用
@@ -52,11 +53,11 @@ def get_scene(scene_path, freq_hz, max_depth=5, max_diff=2, material_tag="concre
     scene = load_scene(scene_path)
     scene.frequency = float(freq_hz)
 
-    # 统一设置：单天线各向同性阵列（最贴近你 MATLAB sigstrength 的"点天线"用法）
+    # 统一设置：单天线各向同性阵列
     scene.tx_array = PlanarArray(num_rows=1, num_cols=1,
                                  vertical_spacing=0.5, horizontal_spacing=0.5,
                                  pattern="iso", polarization="V")
-    scene.rx_array = scene.tx_array  # 复用同一配置
+    scene.rx_array = scene.tx_array
 
     _SCENE_CACHE[key] = scene
     return scene
@@ -102,7 +103,7 @@ def sigstrength(scene_path,
         max_depth=int(max_depth),
         los=True,
         specular_reflection=True,
-        diffuse_reflection=bool(ENABLE_SCATTERING),    # <= 核心开关
+        diffuse_reflection=bool(ENABLE_SCATTERING),
         refraction=bool(ENABLE_REFRACTION),
         diffraction=(int(max_diff) > 0),
         edge_diffraction=bool(ENABLE_EDGE_DIFFRACTION),

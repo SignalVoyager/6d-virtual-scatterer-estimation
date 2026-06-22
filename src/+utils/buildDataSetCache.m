@@ -1,39 +1,48 @@
-%% parseSamplingSpec
+%% buildDataSetCache
 %
-% Parses a sampling specification structure and extracts the sampling mode
-% and normalized arguments.
+% Builds all datasets described in config.dataSetList and returns them as a
+% name-indexed struct cache.
 %
 % SYNTAX:
-%   [mode, args] = parseSamplingSpec(spec)
+%   dataSetCache = buildDataSetCache(envObj, dataSetList, dataDir)
 %
 % INPUTS:
-%   spec - struct
-%       A structure containing sampling configuration with the following fields:
-%       - samplingMode (required): string specifying the sampling mode
-%       - samplingArgs (optional): struct containing sampling arguments
+%   envObj - env.WirelessEnvironment
+%       Environment object that provides generateDataset().
+%
+%   dataSetList - struct array
+%       Dataset entries from config.dataSetList.
+%
+%   dataDir - string/char
+%       Directory where dataset MAT files are saved/loaded as data/<name>.mat.
 %
 % OUTPUTS:
-%   mode - string
-%       The sampling mode extracted from spec.samplingMode.
-%       Supported modes: "geom-geom", "list-rand", "list-geom", "rand-rand", "randblock-randblock"
-%
-%   args - cell array
-%       A key-value paired cell array of normalized arguments in the form
-%       {key1, val1, key2, val2, ...}. Arguments are ordered by mode-specific
-%       preference, followed by any remaining arguments.
-%
-% NOTES:
-%   - Throws an error if "samplingMode" field is missing.
-%   - Arguments are normalized via iNormalizeJsonValue, which converts cell
-%     arrays to matrices when possible.
-%   - Special handling for 'rxNum': negative scalar values are converted to inf.
-%   - Argument order is determined by iPreferredOrder for each sampling mode.
+%   dataSetCache - struct
+%       Struct with fields keyed by dataset name.
 %
 % SEE ALSO:
-%   iPreferredOrder, iNormalizeJsonValue
-function [mode, args] = parseSamplingSpec(spec)
+%   env.WirelessEnvironment/generateDataset
+function dataSetCache = buildDataSetCache(envObj, dataSetList, dataDir)
+dataSetList = [dataSetList{:}];
+dataSetCache = struct();
+
+for i = 1:numel(dataSetList)
+    ds = dataSetList(i);
+    dsName = char(string(ds.name));
+    [samplingMode, samplingArgs] = iParseSamplingSpec(ds);
+    dsPath = fullfile(dataDir, string(ds.name) + ".mat");
+
+    dataSetCache.(dsName) = envObj.generateDataset( ...
+        ds.Nt_side, ds.Nr_side, ...
+        ds.dataMode, "save", dsPath, ...
+        "samplingMode", samplingMode, ...
+        "samplingArgs", samplingArgs);
+end
+end
+
+function [mode, args] = iParseSamplingSpec(spec)
 if ~isfield(spec, "samplingMode")
-    error('parseSamplingSpec: Missing required field "samplingMode".');
+    error('buildDataSetCache: Missing required field "samplingMode".');
 end
 mode = string(spec.samplingMode);
 
@@ -59,7 +68,7 @@ for i = 1:numel(orderedKeys)
         if strcmp(key, 'rxNum') && isnumeric(val) && isscalar(val) && val < 0
             val = inf;
         end
-        args(end+1:end+2) = {key, val};
+        args(end+1:end+2) = {key, val}; %#ok<AGROW>
     end
 end
 
@@ -74,7 +83,7 @@ for i = 1:numel(remaining)
     if strcmp(key, 'rxNum') && isnumeric(val) && isscalar(val) && val < 0
         val = inf;
     end
-    args(end+1:end+2) = {key, val};
+    args(end+1:end+2) = {key, val}; %#ok<AGROW>
 end
 end
 
@@ -107,7 +116,7 @@ if iscell(in)
             out = cell2mat(in);
             return;
         catch
-            % keep original cell structure when conversion is invalid
+            % Keep original cell structure when conversion is invalid.
         end
     end
 

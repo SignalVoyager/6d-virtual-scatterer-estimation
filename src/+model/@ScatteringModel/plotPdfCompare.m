@@ -33,9 +33,18 @@ if nargin < 3 || isempty(opt), opt = struct(); end
 if ~isfield(opt,"binWidth_dB"), opt.binWidth_dB = 1.0; end
 if ~isfield(opt,"smoothWin"),   opt.smoothWin = 3; end
 
-valid = P.valid;
-y_dBm    = 10*log10(P.y_mW(valid));
-yhat_dBm = 10*log10(P.yhat_mW(valid));
+if isfield(P, "y_mW_raw") && isfield(P, "yhat_mW_raw")
+    yUse = P.y_mW_raw;
+    yhatUse = P.yhat_mW_raw;
+else
+    yUse = P.y_mW;
+    yhatUse = P.yhat_mW;
+end
+
+valid = ~isnan(yUse) & ~isinf(yUse) & (yUse > 0) & ...
+        ~isnan(yhatUse) & ~isinf(yhatUse) & (yhatUse > 0);
+y_dBm    = 10*log10(yUse(valid));
+yhat_dBm = 10*log10(yhatUse(valid));
 
 bw = opt.binWidth_dB;
 lo = floor(min([y_dBm; yhat_dBm]));

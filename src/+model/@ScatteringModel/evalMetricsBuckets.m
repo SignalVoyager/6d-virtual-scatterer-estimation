@@ -48,14 +48,16 @@ B.q90 = q90;
 B.LOW  = oneBucket(y_mW <= q50);
 B.MID  = oneBucket((y_mW > q50) & (y_mW <= q90));
 B.HIGH = oneBucket(y_mW > q90);
+B.balanced_nmse = mean([B.LOW.nmse, B.MID.nmse, B.HIGH.nmse], "omitnan");
 
 function out = oneBucket(mask)
-    out = struct('mse', NaN, 'nmse', NaN, 'count', 0);
+    out = struct('mse', NaN, 'nmse', NaN, 'relRMSE', NaN, 'count', 0);
     if ~any(mask), return; end
     mse_b = mean(res_mW(mask).^2);
     nmse_b = mse_b / max(mean(y_mW(mask).^2), eps);
     out.mse = mse_b;
     out.nmse = nmse_b;
+    out.relRMSE = sqrt(nmse_b);
     out.count = nnz(mask);
 end
 end

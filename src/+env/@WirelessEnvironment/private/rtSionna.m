@@ -68,7 +68,7 @@ end
 
 % ---- init python module cache once ----
 if ~isfield(state, "py_sionna") || isempty(state.py_sionna)
-    % GPU visibility (按你的习惯封装在这里)
+    % GPU visibility
     if isfield(spec, "cudaVisibleDevices")
         setenv("CUDA_DEVICE_ORDER", "PCI_BUS_ID");
         setenv("CUDA_VISIBLE_DEVICES", string(spec.cudaVisibleDevices));
@@ -82,7 +82,7 @@ if ~isfield(state, "py_sionna") || isempty(state.py_sionna)
     end
 
     py_util = py.importlib.import_module("importlib.util");
-    specpy  = py_util.spec_from_file_location("sionna_rt_adapter", path.sionnaModule);
+    specpy  = py_util.spec_from_file_location("sionnaRtAdapter", path.sionnaModule);
     mod     = py_util.module_from_spec(specpy);
     specpy.loader.exec_module(mod);
 
