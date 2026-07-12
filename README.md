@@ -29,6 +29,10 @@ Recommended (from project root):
 Direct run:
 - execute `experiments/<exp_name>/run_experiment.m` after setting `expRoot`
 
+Current reviewer-response experiment:
+- `exp04_propagation_order_ablation`: compact paired 3-reflection/2-diffraction
+  versus 1-reflection/no-diffraction comparison with Overall, LoS, and NLoS MAE.
+
 ## Configuration Principles
 - JSON does not support comments:
   - keep multiple environments under `scenes`

@@ -46,7 +46,7 @@ function main_all_experiments()
     addpath(genpath(fullfile(projectRoot, "src")));
 
     % ---------- choose experiments ----------
-    expNames = ["exp03_model_comparison"]; % cell array of experiment folder names under project/experiments/
+    expNames = ["exp04_propagation_order_ablation"]; % experiment folders under project/experiments/
     % expNames = ["exp03_model_comparison"];
 
     % ---------- choose RNG seeds ----------

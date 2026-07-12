@@ -72,9 +72,11 @@ txSites = txsite("cartesian", ...
 rxSites = rxsite("cartesian", "AntennaPosition", rxPos);
 
 % ---- call ----
+% Pass the configured model exactly once. A second PropagationModel
+% name-value would override state.pm and restore MATLAB's ray-tracing
+% defaults (currently 2 reflections and 0 diffractions).
 % Expect: [NrxSamp x NtxSamp]
-P_dBm = sigstrength(rxSites, txSites, state.pm, ...
-    "PropagationModel", "raytracing", "Map", state.viewer);
+P_dBm = sigstrength(rxSites, txSites, state.pm, "Map", state.viewer);
 
 % 清理临时对象（viewer/pm 保留在 state 里）
 clear txSites rxSites
