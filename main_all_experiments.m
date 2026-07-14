@@ -46,12 +46,12 @@ function main_all_experiments()
     addpath(genpath(fullfile(projectRoot, "src")));
 
     % ---------- choose experiments ----------
-    expNames = ["exp04_propagation_order_ablation"]; % experiment folders under project/experiments/
+    expNames = ["exp05_sector_number_sensitivity"]; % experiment folders under project/experiments/
     % expNames = ["exp03_model_comparison"];
 
     % ---------- choose RNG seeds ----------
     % rngValues = [521,75,185,19,424,7172,1,2354,888,48];  % can be vector
-    rngValues = [521];
+    rngValues = [521,75,185,19,424];
 
     for e = 1:numel(expNames)
         expName = expNames(e);

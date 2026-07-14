@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "experimentId": "exp05_sector_number_sensitivity",
+    "description": "Sensitivity analysis of the bidirectional sector number M for VirtualScatter6D."
+  },
+  "backend": {
+    "condaEnv": "D:/Anaconda3/envs/scibase",
+    "sionnaModule": "../../src/+utils/sionnaRtAdapter.py",
+    "maxRef": 2,
+    "maxDif": 0
+  },
+  "radio": {
+    "fc": 2600000000.0,
+    "Pt_dBm": 30.0
+  },
+  "grid": {
+    "areaSize": [300.0, 300.0],
+    "gridSize": 5.0,
+    "tx_pos_z": 9.0,
+    "rx_pos_z": 0.5
+  },
+  "scenes": {
+    "dense": {
+      "name": "dense",
+      "scatterTable": [
+        [-120.0, 105.0, 0.0, 26.0, 12.0, 18.0],
+        [-85.0, 82.0, 0.0, 24.0, 14.0, 12.0],
+        [-20.0, 102.0, 0.0, 28.0, 10.0, 15.0],
+        [45.0, 95.0, 0.0, 30.0, 11.0, 14.0],
+        [105.0, 105.0, 0.0, 34.0, 12.0, 16.0],
+        [-125.0, 25.0, 0.0, 30.0, 12.0, 13.0],
+        [-35.0, 35.0, 0.0, 26.0, 11.0, 11.0],
+        [70.0, 45.0, 0.0, 32.0, 14.0, 17.0],
+        [110.0, 15.0, 0.0, 28.0, 12.0, 10.0],
+        [55.0, -10.0, 0.0, 36.0, 14.0, 12.0],
+        [-40.0, -30.0, 0.0, 28.0, 12.0, 10.0],
+        [-120.0, -55.0, 0.0, 40.0, 18.0, 20.0],
+        [35.0, -65.0, 0.0, 34.0, 14.0, 11.0],
+        [115.0, -55.0, 0.0, 30.0, 12.0, 12.0],
+        [-135.0, -120.0, 0.0, 42.0, 16.0, 22.0],
+        [-35.0, -125.0, 0.0, 34.0, 14.0, 13.0],
+        [70.0, -130.0, 0.0, 38.0, 15.0, 14.0]
+      ],
+      "source": "scatterTable"
+    }
+  },
+  "dataSetList": [
+    {
+      "name": "sector_train_template_dense",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "save",
+      "samplingMode": "geom-geom",
+      "samplingArgs": {
+        "txNumPerSc": 4,
+        "rxNumPerSc": 4,
+        "radiationMin": 15,
+        "radiationMax": 35
+      },
+      "activeScenePreset": "dense"
+    },
+    {
+      "name": "test_compact_2r0d_dense",
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "dataMode": "load",
+      "samplingMode": "list-rand",
+      "samplingArgs": {
+        "txGridList": [
+          [30, 30],
+          [4, 4],
+          [56, 4],
+          [56, 56],
+          [4, 56]
+        ],
+        "rxNum": 300
+      },
+      "activeScenePreset": "dense"
+    }
+  ],
+  "models": {
+    "activeModel": "VirtualScatter6D",
+    "VirtualScatter6D": {
+      "modelId": "VirtualScatter6D",
+      "responseFile": "data/responses/response_sector_number.mat",
+      "datasetSelection": {
+        "trainSet": "sector_train_template_dense",
+        "testSet": "test_compact_2r0d_dense"
+      },
+      "hyper": {
+        "NumCenters": 5,
+        "PathLossExp": 2.0,
+        "RefDistance": 1.0,
+        "EpsDist": 0.001,
+        "Solver": "LS-Ridge"
+      }
+    }
+  },
+  "sectorSensitivity": {
+    "scenePreset": "dense",
+    "MList": [2, 3, 4, 5, 6],
+    "numRepeats": 1,
+    "metric": "mae_dB",
+    "testCacheSource": "../exp04_propagation_order_ablation/data/test_second_order_2r0d_seed521.mat",
+    "trainSampling": {
+      "Nt_side": 2,
+      "Nr_side": 2,
+      "sampleSideOffset": 0,
+      "radiationMin": 15,
+      "radiationMax": 35,
+      "radiusFallbacks": [
+        [15, 35],
+        [10, 40],
+        [10, 50],
+        [5, 60]
+      ]
+    },
+    "plot": {
+      "errorBar": "std",
+      "yLim": [null, null],
+      "yTicks": []
+    }
+  },
+  "dataCleaning": {
+    "enabled": false,
+    "method": "fixed_floor",
+    "floor_dBm": -120.0,
+    "q": 0.017,
+    "eps_min_mW": 1.0e-12
+  },
+  "modelEvaluation": {
+    "whichSet": "test",
+    "q": 0.017,
+    "eps_min": 1.0e-12,
+    "eps_mW": 1.0e-12,
+    "cgmSliceMode": "fixTx",
+    "cgmGridList": [
+      [30, 30]
+    ],
+    "enablePdf": false,
+    "enableCgm": false,
+    "enableResidual": false
+  },
+  "envEvaluation": {
+    "txHeatmapOrders": [1, 2, 3, 4, 5],
+    "enableRxCount": false,
+    "enableTxCount": false
+  },
+  "runtime": {
+    "outputMode": "console",
+    "showFigures": false,
+    "forceRetrain": true,
+    "refreshFinalOnly": false
+  }
+}

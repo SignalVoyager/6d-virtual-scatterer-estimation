@@ -29,9 +29,12 @@ Recommended (from project root):
 Direct run:
 - execute `experiments/<exp_name>/run_experiment.m` after setting `expRoot`
 
-Current reviewer-response experiment:
+Current reviewer-response experiments:
 - `exp04_propagation_order_ablation`: compact paired 3-reflection/2-diffraction
   versus 1-reflection/no-diffraction comparison with Overall, LoS, and NLoS MAE.
+- `exp05_sector_number_sensitivity`: sector-number sensitivity for
+  \(M=\{2,3,4,5,6\}\), with geometry-guided oversampling size \(17(M+1)^2\) and a fixed
+  shared test set.
 
 ## Configuration Principles
 - JSON does not support comments:
